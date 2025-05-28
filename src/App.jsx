@@ -236,7 +236,7 @@ const App = () => {
   return (
     <ConfigProvider locale={zhCN}>
       <div className="App">
-        <h1>SKU 管理系统</h1>
+        <h1 style={{ color: 'black' }}>SKU 管理系统</h1>
         {errorMessages.length > 0 && (
           <Alert
             message="发生错误"
