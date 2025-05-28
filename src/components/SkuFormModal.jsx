@@ -12,6 +12,7 @@ const SkuFormModal = ({
   fieldsConfig,
   statusOptions,
   conditionOptions,
+  apiFieldErrors,
 }) => {
   const [form] = Form.useForm();
 
@@ -57,10 +58,25 @@ const SkuFormModal = ({
     }
   }, [visible, initialData, form, fieldsConfig]);
 
+  // 新的 useEffect 用于处理来自 API 的字段错误
+  useEffect(() => {
+    if (apiFieldErrors && apiFieldErrors.length > 0) {
+      const antdFieldErrors = apiFieldErrors.map(err => ({
+        name: err.loc[err.loc.length - 1], // FastAPI通常将字段名放在loc数组的最后
+        errors: [err.msg],
+      }));
+      form.setFields(antdFieldErrors);
+    }
+    // 注意：当 apiFieldErrors 变为空数组时（例如 App.jsx 中清空时），
+    // 不需要显式清除 form.setFields 设置的错误，因为下次 validateFields 或 setFieldsValue 会覆盖它们。
+    // 如果确实需要主动清除，可以在 App.jsx 清空 apiFieldErrors 后，再调用 form.resetFields() 或 form.setFields([])，但这需要更复杂的 prop 传递或 ref 使用。
+    // 目前的设计是，错误在下次提交前或关闭模态框时由 App.jsx 清空 formApiFieldErrors，下次打开模态框时 apiFieldErrors 会是空数组。
+  }, [apiFieldErrors, form]);
+
   const handleOk = () => {
     form
       .validateFields()
-      .then((values) => {
+      .then(async (values) => {
         // 在提交前转换回后端期望的类型
         const submissionValues = { ...values };
         fieldsConfig.forEach(field => {
@@ -77,11 +93,20 @@ const SkuFormModal = ({
             submissionValues[field.name] = submissionValues[field.name] === 'True' || submissionValues[field.name] === true;
           }
         });
-        onSubmit(submissionValues);
-        form.resetFields(); // 提交成功后重置表单
+
+        const success = await onSubmit(submissionValues);
+
+        if (success) {
+          form.resetFields(); // 仅在成功时重置表单
+          // onClose(); // App.jsx 中的 onSubmit 成功后会处理关闭逻辑
+        } else {
+          // 当 onSubmit 返回 false (即发生错误) 时，模态框不关闭，表单不重置。
+          // 错误信息由 App.jsx 中的 Alert 组件显示。
+        }
       })
       .catch((info) => {
-        console.log('Validate Failed:', info);
+        console.log('Validate Failed (前端校验失败):', info);
+        // 前端表单校验本身的错误会由 Form.Item 自动显示，这里可以不用额外处理
       });
   };
 

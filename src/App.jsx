@@ -16,6 +16,7 @@ const App = () => {
   const [editingSku, setEditingSku] = useState(null);
   const fileInputRef = useRef(null);
   const [errorMessages, setErrorMessages] = useState([]); // 用于存储和显示多个错误
+  const [formApiFieldErrors, setFormApiFieldErrors] = useState([]); // 新状态，用于存储传递给模态框的字段级错误
 
   const fetchSkusWithHandling = async () => {
     setLoading(true);
@@ -141,9 +142,9 @@ const App = () => {
   const handleModalSubmit = async (values) => {
     setLoading(true);
     setErrorMessages([]);
+    setFormApiFieldErrors([]); // <--- 在提交前清空字段错误
     try {
       if (editingSku && editingSku.id) {
-        // 从 values 中移除 id，因为它通过 URL 传递
         const { id, ...updateValues } = values;
         await updateSku(editingSku.id, updateValues);
         message.success('SKU 更新成功!');
@@ -153,13 +154,19 @@ const App = () => {
       }
       setIsModalOpen(false);
       fetchSkusWithHandling(); // 重新加载数据
+      return true; // <--- 新增：操作成功时返回 true
     } catch (error) {
       console.error('操作 SKU 失败:', error);
-      // API 服务中抛出的错误 e.message 将包含后端返回的 detail
       message.error(`${editingSku ? '更新' : '创建'} SKU 失败: ${error.message}`);
-      setErrorMessages(prev => [...prev, `${editingSku ? '更新' : '创建'} SKU 失败: ${error.message}`]);
-      // 不关闭模态框，让用户可以修正错误
-      // setIsModalOpen(false);
+      // setErrorMessages(prev => [...prev, `${editingSku ? '更新' : '创建'} SKU 失败: ${error.message}`]);
+      // ^^^ 如果 fieldErrors 存在，优先使用更具体的字段错误提示，否则使用通用错误信息
+      if (error.fieldErrors && Array.isArray(error.fieldErrors)) {
+        setErrorMessages(prev => [...prev, '表单提交失败，请检查以下字段的错误提示。']); 
+        setFormApiFieldErrors(error.fieldErrors);
+      } else {
+        setErrorMessages(prev => [...prev, `${editingSku ? '更新' : '创建'} SKU 失败: ${error.message}`]);
+      }
+      return false; // <--- 新增：操作失败时返回 false
     } finally {
       setLoading(false);
     }
@@ -168,6 +175,7 @@ const App = () => {
   const handleModalClose = () => {
     setIsModalOpen(false);
     setEditingSku(null);
+    setFormApiFieldErrors([]); // <--- 关闭模态框时清空字段错误
   };
 
   const handleExport = () => {
@@ -298,6 +306,7 @@ const App = () => {
           fieldsConfig={fieldsConfig}
           statusOptions={statusOptions}
           conditionOptions={conditionOptions}
+          apiFieldErrors={formApiFieldErrors} // <--- 将字段错误传递给模态框
         />
       </div>
     </ConfigProvider>
