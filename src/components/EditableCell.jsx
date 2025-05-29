@@ -11,7 +11,7 @@ const EditableCell = ({
   dataIndex,
   title,
   inputType,
-  record,
+  record, // record 现在代表原始数据，不是编辑中的实时数据
   index,
   children,
   ...restProps
@@ -74,15 +74,10 @@ const EditableCell = ({
           name={dataIndex}
           style={{ margin: 0 }}
           rules={rules}
-          valuePropName={field?.type === 'select' || field?.name === 'allow_dropship_return' ? 'value' : undefined} // For select, valuePropName is 'value'
-          // 对于 Select 和 InputNumber，需要处理 initialValue 的类型匹配
-          initialValue={
-            field?.type === 'select' && record[dataIndex] !== undefined && record[dataIndex] !== null
-              ? String(record[dataIndex]) // Select 期望字符串值
-              : field?.type === 'number' && record[dataIndex] !== undefined && record[dataIndex] !== null
-                ? parseFloat(record[dataIndex]) // InputNumber 期望数字
-                : record[dataIndex] // 其他类型保持原样
-          }
+          valuePropName={field?.type === 'select' || field?.name === 'allow_dropship_return' ? 'value' : undefined} // 对于 Select 和 Checkbox (如果用的话)，valuePropName 是 'value'
+          // 注意：移除 initialValue。Form.Item 应该从 Form 组件的 setFieldsValue 或 initialValues 属性中获取值。
+          // 当 App.jsx 的 Form 设置了 initialValues，EditableCell 就不需要再通过 initialValue 传递。
+          // Form.Item 自动会从 Form context 中获取 name 对应的值。
         >
           {inputNode()}
         </Form.Item>

@@ -15,18 +15,17 @@ const App = () => {
   const [dataSource, setDataSource] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
-  const [isModalOpen, setIsModalOpen] = useState(false); // 用于 Create/Edit Modal
-  const [editingSku, setEditingSku] = useState(null); // 用于 Create/Edit Modal 的数据
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingSku, setEditingSku] = useState(null);
   const fileInputRef = useRef(null);
   const [errorMessages, setErrorMessages] = useState([]);
   const [formApiFieldErrors, setFormApiFieldErrors] = useState([]);
 
   const [editingKey, setEditingKey] = useState('');
-  // const [tableDisplayMode, setTableDisplayMode] = useState('partial'); // 移除此状态，因为Show All不再是切换表格列
+  const [editingRowData, setEditingRowData] = useState({}); // 新增状态：存储当前编辑行的实时数据
 
-  // 新增状态：用于控制“Show All”模态框的显示
   const [isViewAllModalOpen, setIsViewAllModalOpen] = useState(false);
-  const [viewingSku, setViewingSku] = useState(null); // 存储要查看所有字段的 SKU 数据
+  const [viewingSku, setViewingSku] = useState(null);
 
   const fetchSkusWithHandling = async () => {
     setLoading(true);
@@ -52,78 +51,88 @@ const App = () => {
   const isEditing = (record) => record.key === editingKey;
 
   const edit = (record) => {
-    const formData = { ...record };
+    // 如果有正在编辑的行，先处理它
+    if (editingKey && editingKey !== record.key) {
+      // 提示用户保存或取消当前编辑，或者自动保存/取消
+      message.warning('Please save or cancel the current editing row before editing another!');
+      return; // 阻止编辑新行
+    }
+
+    // 初始化 form 和 editingRowData
+    const initialValues = { ...record };
     fieldsConfig.forEach(field => {
       if (field.type === 'select') {
-         if (formData[field.name] !== undefined && formData[field.name] !== null) {
-             formData[field.name] = String(formData[field.name]);
+         if (initialValues[field.name] !== undefined && initialValues[field.name] !== null) {
+             initialValues[field.name] = String(initialValues[field.name]);
          }
-      } else if (field.type === 'number' && formData[field.name] !== undefined && formData[field.name] !== null) {
-        const numValue = parseFloat(formData[field.name]);
-        formData[field.name] = isNaN(numValue) ? null : numValue;
-      } else if (field.name === 'allow_dropship_return' && formData[field.name] !== undefined && formData[field.name] !== null) {
-        formData[field.name] = String(formData[field.name]);
+      } else if (field.type === 'number' && initialValues[field.name] !== undefined && initialValues[field.name] !== null) {
+        const numValue = parseFloat(initialValues[field.name]);
+        initialValues[field.name] = isNaN(numValue) ? null : numValue;
+      } else if (field.name === 'allow_dropship_return' && initialValues[field.name] !== undefined && initialValues[field.name] !== null) {
+        initialValues[field.name] = String(initialValues[field.name]);
       }
     });
-    form.setFieldsValue(formData);
+
+    form.setFieldsValue(initialValues);
+    setEditingRowData(initialValues); // 将当前行数据复制到编辑草稿状态
     setEditingKey(record.key);
   };
 
   const cancel = () => {
     setEditingKey('');
+    setEditingRowData({}); // 清空草稿数据
     setFormApiFieldErrors([]);
   };
 
+  // 保存编辑
   const save = async (key) => {
     setLoading(true);
     setErrorMessages([]);
     setFormApiFieldErrors([]);
 
     try {
-      const row = await form.validateFields();
-      const newData = [...dataSource];
-      const index = newData.findIndex((item) => key === item.key);
+      // 从 form 中获取最新验证通过的值
+      const validatedFields = await form.validateFields();
 
-      if (index > -1) {
-        const item = newData[index];
-        const updatedItem = { ...item, ...row };
+      // 将 validatedFields 合并到 editingRowData 中，确保所有字段都存在
+      const updatedItem = { ...editingRowData, ...validatedFields };
 
-        fieldsConfig.forEach(field => {
-            if (field.type === 'number' && updatedItem[field.name] !== undefined && updatedItem[field.name] !== null) {
-                const parsedValue = parseFloat(updatedItem[field.name]);
-                if (!isNaN(parsedValue)) {
-                    updatedItem[field.name] = field.isFee ? parseFloat(parsedValue.toFixed(2)) : parsedValue;
-                } else {
-                    updatedItem[field.name] = null;
-                }
-            }
-            if (field.name === 'status' && updatedItem[field.name] !== undefined) {
-                updatedItem[field.name] = parseInt(updatedItem[field.name], 10);
-            }
-            if (field.name === 'condition' && updatedItem[field.name] !== undefined) {
-                updatedItem[field.name] = parseInt(updatedItem[field.name], 10);
-            }
-            if (field.name === 'allow_dropship_return' && updatedItem[field.name] !== undefined) {
-                updatedItem[field.name] = updatedItem[field.name] === 'True' || updatedItem[field.name] === true;
-            }
-        });
+      // 进行类型转换以符合后端API要求 (这部分逻辑保持不变)
+      fieldsConfig.forEach(field => {
+          if (field.type === 'number' && updatedItem[field.name] !== undefined && updatedItem[field.name] !== null) {
+              const parsedValue = parseFloat(updatedItem[field.name]);
+              if (!isNaN(parsedValue)) {
+                  updatedItem[field.name] = field.isFee ? parseFloat(parsedValue.toFixed(2)) : parsedValue;
+              } else {
+                  updatedItem[field.name] = null;
+              }
+          }
+          if (field.name === 'status' && updatedItem[field.name] !== undefined) {
+              updatedItem[field.name] = parseInt(updatedItem[field.name], 10);
+          }
+          if (field.name === 'condition' && updatedItem[field.name] !== undefined) {
+              updatedItem[field.name] = parseInt(updatedItem[field.name], 10);
+          }
+          if (field.name === 'allow_dropship_return' && updatedItem[field.name] !== undefined) {
+              updatedItem[field.name] = updatedItem[field.name] === 'True' || updatedItem[field.name] === true;
+          }
+      });
 
-        const { key: _, ...apiPayload } = updatedItem;
+      const { key: _, ...apiPayload } = updatedItem; // 移除 key 字段
 
-        if (item.id === 'new-temp-id') {
-          await createSku(apiPayload);
-          message.success('SKU created successfully!');
-        } else {
-          await updateSku(item.id, apiPayload);
-          message.success('SKU updated successfully!');
-        }
-
-        fetchSkusWithHandling();
-        setEditingKey('');
-      } else {
-        console.warn('Attempted to save a non-existent row:', key);
-        message.error('Failed to save: Row not found or already saved.');
+      // 提交到后端
+      if (key.startsWith('new-temp-id')) { // 新增的行
+        await createSku(apiPayload);
+        message.success('SKU created successfully!');
+      } else { // 现有行
+        await updateSku(apiPayload.id, apiPayload); // 更新时使用真实的 ID
+        message.success('SKU updated successfully!');
       }
+
+      // 成功后，重新获取数据，清除编辑状态和草稿数据
+      fetchSkusWithHandling();
+      setEditingKey('');
+      setEditingRowData({});
     } catch (errInfo) {
       console.error('Validate Failed (Save Inline):', errInfo);
       if (errInfo.errorFields) {
@@ -140,6 +149,12 @@ const App = () => {
     }
   };
 
+  // 当行内表单值改变时，实时更新 editingRowData
+  const handleInlineFormValuesChange = (changedValues, allValues) => {
+    setEditingRowData(prev => ({ ...prev, ...changedValues }));
+  };
+
+
   // 定义表格默认显示的字段名称列表 (精简模式)
   const defaultDisplayFields = [
     'vendor_sku', 'product_name', 'dropship_price', 'condition',
@@ -148,7 +163,6 @@ const App = () => {
     'status',
   ];
 
-  // getTableColumns 现在总是返回精简模式的列定义
   const getTableColumns = () => {
     const columnsToDisplay = fieldsConfig.filter(field => defaultDisplayFields.includes(field.name));
 
@@ -169,8 +183,11 @@ const App = () => {
             dataIndex: field.name,
             title: field.label,
             editing: isEditing(record),
+            // 点击单元格进入编辑模式，但如果当前有其他行正在编辑，则先提醒
             onClick: () => {
-              if (!isEditing(record)) {
+              if (editingKey && editingKey !== record.key) {
+                message.warning('Please save or cancel the current editing row before editing another!');
+              } else if (!isEditing(record)) {
                 edit(record);
               }
             },
@@ -277,16 +294,18 @@ const App = () => {
     };
 
     setDataSource([...dataSource, newSku]);
-    edit(newSku);
+    edit(newSku); // 新增后立即进入编辑模式
   };
 
   const handleDelete = async (skuId) => {
     setLoading(true);
     setErrorMessages([]);
     try {
+      // 如果删除的是正在编辑的临时新行，直接从dataSource中移除并取消编辑
       if (skuId === editingKey && skuId.startsWith('new-temp-id')) {
         setDataSource(dataSource.filter(item => item.key !== skuId));
         setEditingKey('');
+        setEditingRowData({}); // 清除草稿数据
         message.success('New SKU discarded!');
       } else {
         await deleteSku(skuId);
@@ -312,12 +331,15 @@ const App = () => {
     setErrorMessages([]);
     let successCount = 0;
     const currentErrors = [];
+    const newSelectedRowKeys = []; // 用于收集删除后仍然选中的key
+    const newEditingRowData = { ...editingRowData };
 
     for (const skuId of selectedRowKeys) {
       try {
         if (skuId === editingKey && skuId.startsWith('new-temp-id')) {
-            setDataSource(dataSource.filter(item => item.key !== skuId));
+            setDataSource(prev => prev.filter(item => item.key !== skuId));
             setEditingKey('');
+            setEditingRowData({}); // 清除草稿数据
             message.success('New SKU discarded!');
         } else {
             await deleteSku(skuId);
@@ -326,6 +348,7 @@ const App = () => {
       } catch (error) {
         console.error(`Failed to delete SKU ID ${skuId}:`, error);
         currentErrors.push(`Failed to delete SKU ID ${skuId}: ${error.message}`);
+        newSelectedRowKeys.push(skuId); // 删除失败的项保留在选中状态
       }
     }
     setLoading(false);
@@ -334,10 +357,11 @@ const App = () => {
     }
     if (currentErrors.length > 0) {
       setErrorMessages(currentErrors);
-      message.error(`${currentErrors.length} SKUs failed to delete, please check the prompts.`);
+      message.error(`There were ${currentErrors.length} SKUs that failed to delete. Please check the prompts.`);
     }
-    fetchSkusWithHandling();
-    setSelectedRowKeys([]);
+    fetchSkusWithHandling(); // 重新加载数据以反映最新状态
+    setSelectedRowKeys(newSelectedRowKeys); // 更新选中状态
+    setEditingRowData(newEditingRowData); // 保留未受影响的草稿数据
   };
 
   const handleModalSubmit = async (values) => { /* ... (unchanged) ... */ return true; };
@@ -397,7 +421,7 @@ const App = () => {
           )}
         </Space>
         {/* 移除了之前的 Show Less 按钮和逻辑 */}
-        <Form form={form} component={false}>
+        <Form form={form} component={false} onValuesChange={handleInlineFormValuesChange}> {/* 添加 onValuesChange */}
           <Table
             rowSelection={rowSelection}
             components={{
@@ -405,7 +429,7 @@ const App = () => {
                 cell: EditableCell,
               },
             }}
-            columns={getTableColumns()} // 直接调用 getTableColumns()
+            columns={getTableColumns()}
             dataSource={dataSource}
             loading={loading}
             scroll={{ x: 'max-content', y: '60vh' }}
