@@ -33,15 +33,40 @@ export const percentageValidationPattern = /^(\d{1,2}(\.\d{1,2})?|100)$/; // For
 export const harmonizedCodePattern = /^[0-9A-Za-z.\-]+$/; // Keep this one stricter for harmonized code
 
 
-// List of mandatory field names from the CSV
-// Removed 'ship_desc', 'return_policy', 'harmonized_code', 'net_weight', 'gross_weight',
-// 'product_height', 'product_length', 'product_width', 'box_height', 'box_length', 'box_width',
-// 'qty_case', 'qty_box' from this list to make them optional.
+// List of mandatory field names from the CSV (UPDATED)
+// Includes original mandatory fields + newly requested mandatory fields
 const mandatoryFieldsFromCSV = [
-  'vendor_sku', 'product_name', 'dropship_price', 'allow_dropship_return', 'condition',
-  'UOM', 'ship_from', 'ship_to', 'ship_carrier', 'title', 'short_desc',
-  'keywords', 'key_features_1', 'key_features_2', 'main_image', 'full_image', 'thumbnail_image'
+  'vendor_sku',
+  'UPC', // 新增必填
+  'product_name', // 原有 Product EN Name
+  'product_cn_name', // 新增必填
+  'dropship_price',
+  'brand', // 新增必填
+  'net_weight', // 新增必填
+  'gross_weight', // 新增必填
+  'product_height', // 新增必填
+  'product_length', // 新增必填
+  'product_width', // 新增必填
+  'box_height', // 新增必填
+  'box_length', // 新增必填
+  'box_width', // 新增必填
+  'main_image',
+  'size_chart_image', // 新增必填
+  'allow_dropship_return',
+  'condition',
+  'UOM',
+  'ship_from',
+  'ship_to',
+  'ship_carrier',
+  'title',
+  'short_desc',
+  'keywords',
+  'key_features_1',
+  'key_features_2',
+  'full_image', // 确保这个是 Full Image, 如果是必填请加回
+  'thumbnail_image', // 确保这个是 Thumbnail Image, 如果是必填请加回
 ];
+
 
 // Helper function to create validation object
 const createValidation = (field) => {
@@ -63,6 +88,7 @@ const createValidation = (field) => {
 };
 
 // Temporary array to hold original structures before adjusting isMandatory
+// ADDED 'product_cn_name' and updated origValidation for new mandatory fields
 const tempFieldsConfig = [
   {
     name: 'vendor_sku', label: 'Vendor SKU', type: 'text', gridWidth: 8,
@@ -71,13 +97,18 @@ const tempFieldsConfig = [
   },
   {
     name: 'UPC', label: 'UPC', type: 'text', gridWidth: 8,
-    origValidation: { pattern: upcPattern, patternMsg: 'If provided, UPC must be a 12-digit number.', maxLength: 12 },
+    origValidation: { required: true, pattern: upcPattern, patternMsg: 'UPC must be exactly 12 digits.', maxLength: 12 }, // Updated to required
     description: 'Universal Product Code (12-digit number).', example: '123456789012'
   },
   {
-    name: 'product_name', label: 'Product Name', type: 'text', gridWidth: 8,
-    origValidation: { required: true, maxLength: 100, pattern: generalTextAndSpecialCharsPatternNotEmpty, patternMsg: 'Product name allows English, Chinese, numbers, spaces, and common special characters. Max 100 characters.' },
-    description: 'Full name of the product.', example: 'Example Product Name'
+    name: 'product_name', label: 'Product EN Name', type: 'text', gridWidth: 8, // Label changed to EN Name
+    origValidation: { required: true, maxLength: 100, pattern: generalTextAndSpecialCharsPatternNotEmpty, patternMsg: 'Product EN name allows English, Chinese, numbers, spaces, and common special characters. Max 100 characters.' },
+    description: 'Full product name in English.', example: 'Example Product Name'
+  },
+  {
+    name: 'product_cn_name', label: 'Product CN Name', type: 'text', gridWidth: 8, // New field for CN Name
+    origValidation: { required: true, maxLength: 100, pattern: generalTextAndSpecialCharsPatternNotEmpty, patternMsg: 'Product CN name allows Chinese, English, numbers, spaces, and common special characters. Max 100 characters.' },
+    description: 'Full product name in Chinese.', example: '示例产品名称'
   },
   {
     name: 'status', label: 'Status', type: 'select', gridWidth: 8,
@@ -87,7 +118,7 @@ const tempFieldsConfig = [
   },
   {
     name: 'ATS', label: 'ATS', type: 'number', gridWidth: 8,
-    origValidation: { min: 0, pattern: nonNegativeIntegerPattern, patternMsg: 'ATS must be a non-negative integer.', minMsg:'ATS cannot be negative.' }, // Allow ATS to be 0
+    origValidation: { min: 0, pattern: nonNegativeIntegerPattern, patternMsg: 'ATS must be a non-negative integer.', minMsg:'ATS cannot be negative.' },
     description: 'Available to Sell quantity.', example: '100'
   },
   {
@@ -113,7 +144,7 @@ const tempFieldsConfig = [
   {
     name: 'HDL_for_returning', label: 'HDL for Returning', type: 'number', isFee: true, gridWidth: 8,
     origValidation: { min: 0, pattern: pricePattern, patternMsg: 'Invalid fee format.', minMsg:'Fee cannot be negative.' },
-    description: 'Handling fee for returning.', example: '3.50'
+    description: 'Returning handling fee.', example: '3.50'
   },
   {
     name: 'storage_monthly', label: 'Storage Monthly', type: 'number', isFee: true, gridWidth: 8,
@@ -178,7 +209,7 @@ const tempFieldsConfig = [
   },
   {
     name: 'brand', label: 'Brand', type: 'text', gridWidth: 8,
-    origValidation: { maxLength: 50, pattern: generalTextAndSpecialCharsPattern, patternMsg: 'Allowed: English, Chinese, numbers, hyphens, spaces, and common special characters. Max 50 characters.', maxLengthMsg: 'Max 50 characters.' },
+    origValidation: { required: true, maxLength: 50, pattern: generalTextAndSpecialCharsPattern, patternMsg: 'Allowed: English, Chinese, numbers, hyphens, spaces, and common special characters. Max 50 characters.', maxLengthMsg: 'Max 50 characters.' }, // Updated to required
     description: 'Product brand.', example: 'Sony'
   },
   {
@@ -196,11 +227,11 @@ const tempFieldsConfig = [
     origValidation: { maxLength: 50, pattern: generalTextAndSpecialCharsPattern, patternMsg: 'Allowed: English, Chinese, numbers, hyphens, spaces, and common special characters. Max 50 characters.', maxLengthMsg: 'Max 50 characters.' },
     description: 'Product size (if applicable).', example: 'One Size'
   },
-  { name: 'option_1', label: 'Option 1', type: 'text', gridWidth: 8, origValidation: { maxLength: 50, pattern: generalTextAndSpecialCharsPattern, patternMsg:'Invalid characters.', maxLengthMsg:'Max 50 characters' }, description:'Custom option 1' },
-  { name: 'option_2', label: 'Option 2', type: 'text', gridWidth: 8, origValidation: { maxLength: 50, pattern: generalTextAndSpecialCharsPattern, patternMsg:'Invalid characters.', maxLengthMsg:'Max 50 characters' }, description:'Custom option 2' },
-  { name: 'option_3', label: 'Option 3', type: 'text', gridWidth: 8, origValidation: { maxLength: 50, pattern: generalTextAndSpecialCharsPattern, patternMsg:'Invalid characters.', maxLengthMsg:'Max 50 characters' }, description:'Custom option 3' },
-  { name: 'option_4', label: 'Option 4', type: 'text', gridWidth: 8, origValidation: { maxLength: 50, pattern: generalTextAndSpecialCharsPattern, patternMsg:'Invalid characters.', maxLengthMsg:'Max 50 characters' }, description:'Custom option 4' },
-  { name: 'option_5', label: 'Option 5', type: 'text', gridWidth: 8, origValidation: { maxLength: 50, pattern: generalTextAndSpecialCharsPattern, patternMsg:'Invalid characters.', maxLengthMsg:'Max 50 characters' }, description:'Custom option 5' },
+  { name: 'option_1', label: 'Option 1', type: 'text', gridWidth: 8, origValidation: { maxLength: 50, pattern: generalTextAndSpecialCharsPattern, patternMsg:'Invalid characters.', maxLengthMsg:'Max 50' }, description:'Custom option 1' },
+  { name: 'option_2', label: 'Option 2', type: 'text', gridWidth: 8, origValidation: { maxLength: 50, pattern: generalTextAndSpecialCharsPattern, patternMsg:'Invalid characters.', maxLengthMsg:'Max 50' }, description:'Custom option 2' },
+  { name: 'option_3', label: 'Option 3', type: 'text', gridWidth: 8, origValidation: { maxLength: 50, pattern: generalTextAndSpecialCharsPattern, patternMsg:'Invalid characters.', maxLengthMsg:'Max 50' }, description:'Custom option 3' },
+  { name: 'option_4', label: 'Option 4', type: 'text', gridWidth: 8, origValidation: { maxLength: 50, pattern: generalTextAndSpecialCharsPattern, patternMsg:'Invalid characters.', maxLengthMsg:'Max 50' }, description:'Custom option 4' },
+  { name: 'option_5', label: 'Option 5', type: 'text', gridWidth: 8, origValidation: { maxLength: 50, pattern: generalTextAndSpecialCharsPattern, patternMsg:'Invalid characters.', maxLengthMsg:'Max 50' }, description:'Custom option 5' },
   {
     name: 'gender', label: 'Gender', type: 'text', gridWidth: 8,
     origValidation: { maxLength: 20, pattern: generalTextAndSpecialCharsPattern, patternMsg:'Allowed: English, Chinese, numbers, hyphens, spaces, and common special characters. Max 20 characters.', maxLengthMsg:'Max 20 characters.' },
@@ -269,7 +300,7 @@ const tempFieldsConfig = [
   },
   {
     name: 'harmonized_code', label: 'Harmonized Code', type: 'text', gridWidth: 8,
-    origValidation: { maxLength: 50, pattern: harmonizedCodePattern, patternMsg:'Invalid harmonized code format (allows numbers, letters, periods, hyphens).', maxLengthMsg:'Max 50 characters.', required: false }, // Set to false
+    origValidation: { maxLength: 50, pattern: harmonizedCodePattern, patternMsg:'Invalid harmonized code format (allows numbers, letters, periods, hyphens).', maxLengthMsg:'Max 50 characters.', required: false },
     description: 'Harmonized System code for customs.', example: '8517.12.0050'
   },
   {
@@ -279,52 +310,52 @@ const tempFieldsConfig = [
   },
   {
     name: 'net_weight', label: 'Net Weight', type: 'number', isFee: true, gridWidth: 8,
-    origValidation: { min:0.01, pattern: pricePattern, patternMsg:'Invalid weight format (e.g., 0.5).', minMsg:'Must be > 0.', required: false }, // Set to false
+    origValidation: { required: true, min:0.01, pattern: pricePattern, patternMsg:'Invalid weight format (e.g., 0.5).', minMsg:'Must be > 0.' }, // Updated to required
     description: 'Product net weight (e.g., kg or lb).', example: '0.25'
   },
   {
     name: 'gross_weight', label: 'Gross Weight', type: 'number', isFee: true, gridWidth: 8,
-    origValidation: { min:0.01, pattern: pricePattern, patternMsg:'Invalid weight format.', minMsg:'Must be > 0.', required: false }, // Set to false
+    origValidation: { required: true, min:0.01, pattern: pricePattern, patternMsg:'Invalid weight format.', minMsg:'Must be > 0.' }, // Updated to required
     description: 'Product gross weight (with packaging).', example: '0.35'
   },
   {
     name: 'product_height', label: 'Product Height', type: 'number', isFee: true, gridWidth: 8,
-    origValidation: { min:0.01, pattern: pricePattern, patternMsg:'Invalid dimension format.', minMsg:'Must be > 0.', required: false }, // Set to false
+    origValidation: { required: true, min:0.01, pattern: pricePattern, patternMsg:'Invalid dimension format.', minMsg:'Must be > 0.' }, // Updated to required
     description: 'Product height (e.g., cm or in).', example: '15.0'
   },
   {
     name: 'product_length', label: 'Product Length', type: 'number', isFee: true, gridWidth: 8,
-    origValidation: { min:0.01, pattern: pricePattern, patternMsg:'Invalid dimension format.', minMsg:'Must be > 0.', required: false }, // Set to false
+    origValidation: { required: true, min:0.01, pattern: pricePattern, patternMsg:'Invalid dimension format.', minMsg:'Must be > 0.' }, // Updated to required
     description: 'Product length.', example: '7.0'
   },
   {
     name: 'product_width', label: 'Product Width', type: 'number', isFee: true, gridWidth: 8,
-    origValidation: { min:0.01, pattern: pricePattern, patternMsg:'Invalid dimension format.', minMsg:'Must be > 0.', required: false }, // Set to false
+    origValidation: { required: true, min:0.01, pattern: pricePattern, patternMsg:'Invalid dimension format.', minMsg:'Must be > 0.' }, // Updated to required
     description: 'Product width.', example: '1.0'
   },
   {
     name: 'box_height', label: 'Box Height', type: 'number', isFee: true, gridWidth: 8,
-    origValidation: { min:0.01, pattern: pricePattern, patternMsg:'Invalid dimension format.', minMsg:'Must be > 0.', required: false }, // Set to false
+    origValidation: { required: true, min:0.01, pattern: pricePattern, patternMsg:'Invalid dimension format.', minMsg:'Must be > 0.' }, // Updated to required
     description: 'Box height.', example: '18.0'
   },
   {
     name: 'box_length', label: 'Box Length', type: 'number', isFee: true, gridWidth: 8,
-    origValidation: { min:0.01, pattern: pricePattern, patternMsg:'Invalid dimension format.', minMsg:'Must be > 0.', required: false }, // Set to false
+    origValidation: { required: true, min:0.01, pattern: pricePattern, patternMsg:'Invalid dimension format.', minMsg:'Must be > 0.' }, // Updated to required
     description: 'Box length.', example: '10.0'
   },
   {
     name: 'box_width', label: 'Box Width', type: 'number', isFee: true, gridWidth: 8,
-    origValidation: { min:0.01, pattern: pricePattern, patternMsg:'Invalid dimension format.', minMsg:'Must be > 0.', required: false }, // Set to false
+    origValidation: { required: true, min:0.01, pattern: pricePattern, patternMsg:'Invalid dimension format.', minMsg:'Must be > 0.' }, // Updated to required
     description: 'Box width.', example: '3.0'
   },
   {
     name: 'qty_case', label: 'Qty/Case', type: 'number', gridWidth: 8,
-    origValidation: { min:1, pattern: positiveIntegerPattern, patternMsg:'Must be a positive integer.', minMsg:'Must be >= 1.', required: false }, // Set to false
+    origValidation: { min:1, pattern: positiveIntegerPattern, patternMsg:'Must be a positive integer.', minMsg:'Must be >= 1.' },
     description: 'Quantity of products per case.', example: '24'
   },
   {
     name: 'qty_box', label: 'Qty/Box', type: 'number', gridWidth: 8,
-    origValidation: { min:1, pattern: positiveIntegerPattern, patternMsg:'Must be a positive integer.', minMsg:'Must be >= 1.', required: false }, // Set to false
+    origValidation: { min:1, pattern: positiveIntegerPattern, patternMsg:'Must be a positive integer.', minMsg:'Must be >= 1.' },
     description: 'Quantity of products per box.', example: '6'
   },
   {
@@ -359,12 +390,12 @@ const tempFieldsConfig = [
   },
   {
     name: 'ship_desc', label: 'Shipping Description', type: 'textarea', rows: 2, gridWidth: 24,
-    origValidation: { maxLength: 200, pattern: generalTextAndSpecialCharsPattern, patternMsg:'Invalid characters.', maxLengthMsg:'Max 200 characters.', required: false }, // Set to false
+    origValidation: { maxLength: 200, pattern: generalTextAndSpecialCharsPattern, patternMsg:'Invalid characters.', maxLengthMsg:'Max 200 characters.', required: false },
     description: 'Additional shipping information.', example: 'Ships in 1-2 business days.'
   },
   {
     name: 'return_policy', label: 'Return Policy', type: 'textarea', rows: 3, gridWidth: 24,
-    origValidation: { maxLength: 1000, pattern: generalTextAndSpecialCharsPattern, patternMsg:'Invalid characters.', maxLengthMsg:'Max 1000 characters.', required: false }, // Set to false
+    origValidation: { maxLength: 1000, pattern: generalTextAndSpecialCharsPattern, patternMsg:'Invalid characters.', maxLengthMsg:'Max 1000 characters.', required: false },
     description: 'Detailed product return policy.', example: '30-day free returns.'
   },
   {
@@ -375,7 +406,7 @@ const tempFieldsConfig = [
   {
     name: 'dropship_desc', label: 'Dropship Description', type: 'textarea', rows: 3, gridWidth: 24,
     origValidation: { maxLength: 1000, pattern: generalTextAndSpecialCharsPattern, patternMsg:'Invalid characters.', maxLengthMsg:'Max 1000 characters.' },
-    description: 'Dropship channel listing description.', example: 'This item is dropshipped directly from the supplier.'
+    description: 'Dropship listing description.', example: 'This item is dropshipped directly from the supplier.'
   },
   {
     name: 'title', label: 'Title (Listing)', type: 'text', gridWidth: 24,
@@ -442,9 +473,9 @@ const tempFieldsConfig = [
   { name: 'side_image', label: 'Side Image URL', type: 'url', gridWidth: 8, origValidation: { pattern: imageUrlPattern, patternMsg: 'Requires a valid URL starting with http(s)://.' } },
   { name: 'back_image', label: 'Back Image URL', type: 'url', gridWidth: 8, origValidation: { pattern: imageUrlPattern, patternMsg: 'Requires a valid URL starting with http(s)://.' } },
   { name: 'detail_image', label: 'Detail Image URL', type: 'url', gridWidth: 8, origValidation: { pattern: imageUrlPattern, patternMsg: 'Requires a valid URL starting with http(s)://.' } },
-  { name: 'full_image', label: 'Full Image URL', type: 'url', gridWidth: 8, origValidation: { required: true, pattern: imageUrlPattern, patternMsg: 'Requires a valid URL starting with http(s)://.' } },
-  { name: 'thumbnail_image', label: 'Thumbnail Image URL', type: 'url', gridWidth: 8, origValidation: { required: true, pattern: imageUrlPattern, patternMsg: 'Requires a valid URL starting with http(s)://.' } },
-  { name: 'size_chart_image', label: 'Size Chart Image URL', type: 'url', gridWidth: 8, origValidation: { pattern: imageUrlPattern, patternMsg: 'Requires a valid URL starting with http(s)://.' } },
+  { name: 'full_image', label: 'Full Image URL', type: 'url', gridWidth: 8, origValidation: { required: true, pattern: imageUrlPattern, patternMsg: 'Requires a valid URL starting with http(s)://.' } }, // Keep as required if needed
+  { name: 'thumbnail_image', label: 'Thumbnail Image URL', type: 'url', gridWidth: 8, origValidation: { required: true, pattern: imageUrlPattern, patternMsg: 'Requires a valid URL starting with http(s)://.' } }, // Keep as required if needed
+  { name: 'size_chart_image', label: 'Size Chart Image URL', type: 'url', gridWidth: 8, origValidation: { required: true, pattern: imageUrlPattern, patternMsg: 'Requires a valid URL starting with http(s)://.' } }, // Updated to required
   { name: 'swatch_image', label: 'Swatch Image URL', type: 'url', gridWidth: 8, origValidation: { pattern: imageUrlPattern, patternMsg: 'Requires a valid URL starting with http(s)://.' } },
   { name: 'additional_image_1', label: 'Additional Image 1 URL', type: 'url', gridWidth: 8, origValidation: { pattern: imageUrlPattern, patternMsg: 'Requires a valid URL starting with http(s)://.' } },
   { name: 'additional_image_2', label: 'Additional Image 2 URL', type: 'url', gridWidth: 8, origValidation: { pattern: imageUrlPattern, patternMsg: 'Requires a valid URL starting with http(s)://.' } },
