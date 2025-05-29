@@ -121,7 +121,7 @@ const App = () => {
       const { key: _, ...apiPayload } = updatedItem; // 移除 key 字段
 
       // 提交到后端
-      if (key.startsWith('new-temp-id')) { // 新增的行
+      if (String(key).startsWith('new-temp-id')) { // 将 key 转换为字符串再使用 startsWith()
         await createSku(apiPayload);
         message.success('SKU created successfully!');
       } else { // 现有行
