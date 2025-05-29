@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import './App.css';
 import { Table, ConfigProvider, Button, message, Upload, Space, Popconfirm, Alert } from 'antd';
-import zhCN from 'antd/locale/zh_CN';
+import zhCN from 'antd/locale/zh_CN'; // Keep zhCN if you still want Chinese locale for Ant Design components
 import * as XLSX from 'xlsx';
 import { fieldsConfig, statusOptions, conditionOptions } from './components/fieldConfig';
 import { UploadOutlined, EditOutlined, DeleteOutlined, PlusOutlined, ExportOutlined } from '@ant-design/icons';
@@ -16,21 +16,21 @@ const App = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSku, setEditingSku] = useState(null);
   const fileInputRef = useRef(null);
-  const [errorMessages, setErrorMessages] = useState([]); // 用于存储和显示多个错误
-  const [formApiFieldErrors, setFormApiFieldErrors] = useState([]); // 新状态，用于存储传递给模态框的字段级错误
+  const [errorMessages, setErrorMessages] = useState([]); // Used to store and display multiple errors
+  const [formApiFieldErrors, setFormApiFieldErrors] = useState([]); // New state for field-level errors from API
 
   const fetchSkusWithHandling = async () => {
     setLoading(true);
-    setErrorMessages([]); // 清空之前的错误
+    setErrorMessages([]); // Clear previous errors
     try {
       const data = await getAllSkus();
-      // 后端返回的 sku 对象应该有 'id' 字段
+      // Backend should return SKU objects with an 'id' field
       setDataSource(data.map(item => ({ ...item, key: item.id })));
-      message.success('SKU 数据加载成功！');
+      message.success('SKU data loaded successfully!');
     } catch (error) {
-      console.error("获取 SKU 失败:", error);
-      message.error(`获取 SKU 失败: ${error.message}`);
-      setErrorMessages(prev => [...prev, `获取 SKU 失败: ${error.message}`]);
+      console.error("Failed to fetch SKUs:", error);
+      message.error(`Failed to fetch SKUs: ${error.message}`);
+      setErrorMessages(prev => [...prev, `Failed to fetch SKUs: ${error.message}`]);
       setDataSource([]);
     } finally {
       setLoading(false);
@@ -52,20 +52,20 @@ const App = () => {
       ellipsis: true,
     })),
     {
-      title: '操作',
+      title: 'Operation',
       key: 'operation',
       fixed: 'right',
       width: 120,
       render: (_, record) => (
         <Space size="middle">
-          <Button icon={<EditOutlined />} onClick={() => handleEdit(record)} type="link">编辑</Button>
+          <Button icon={<EditOutlined />} onClick={() => handleEdit(record)} type="link">Edit</Button>
           <Popconfirm
-            title="确定删除此SKU吗？"
+            title="Are you sure to delete this SKU?"
             onConfirm={() => handleDelete(record.key)}
-            okText="是"
-            cancelText="否"
+            okText="Yes"
+            cancelText="No"
           >
-            <Button icon={<DeleteOutlined />} type="link" danger>删除</Button>
+            <Button icon={<DeleteOutlined />} type="link" danger>Delete</Button>
           </Popconfirm>
         </Space>
       ),
@@ -96,13 +96,13 @@ const App = () => {
     setErrorMessages([]);
     try {
       await deleteSku(skuId);
-      message.success('SKU 删除成功!');
-      fetchSkusWithHandling(); // 重新加载数据
-      setSelectedRowKeys(prevKeys => prevKeys.filter(k => k !== skuId)); // 从选择中移除
+      message.success('SKU deleted successfully!');
+      fetchSkusWithHandling(); // Reload data
+      setSelectedRowKeys(prevKeys => prevKeys.filter(k => k !== skuId)); // Remove from selection
     } catch (error) {
-      console.error('删除 SKU 失败:', error);
-      message.error(`删除 SKU 失败: ${error.message}`);
-      setErrorMessages(prev => [...prev, `删除 SKU ID ${skuId} 失败: ${error.message}`]);
+      console.error('Failed to delete SKU:', error);
+      message.error(`Failed to delete SKU: ${error.message}`);
+      setErrorMessages(prev => [...prev, `Failed to delete SKU ID ${skuId}: ${error.message}`]);
     } finally {
       setLoading(false);
     }
@@ -110,7 +110,7 @@ const App = () => {
 
   const handleDeleteSelected = async () => {
     if (selectedRowKeys.length === 0) {
-      message.warning('请先选择要删除的 SKU!');
+      message.warning('Please select SKUs to delete first!');
       return;
     }
     setLoading(true);
@@ -123,55 +123,55 @@ const App = () => {
         await deleteSku(skuId);
         successCount++;
       } catch (error) {
-        console.error(`删除 SKU ID ${skuId} 失败:`, error);
-        currentErrors.push(`删除 SKU ID ${skuId} 失败: ${error.message}`);
+        console.error(`Failed to delete SKU ID ${skuId}:`, error);
+        currentErrors.push(`Failed to delete SKU ID ${skuId}: ${error.message}`);
       }
     }
     setLoading(false);
     if (successCount > 0) {
-      message.success(`成功删除 ${successCount} 个 SKU!`);
+      message.success(`Successfully deleted ${successCount} SKUs!`);
     }
     if (currentErrors.length > 0) {
       setErrorMessages(currentErrors);
-      message.error(`有 ${currentErrors.length} 个 SKU 删除失败，请查看提示。`);
+      message.error(`${currentErrors.length} SKUs failed to delete, please check the prompts.`);
     }
-    fetchSkusWithHandling(); // 重新加载数据
-    setSelectedRowKeys([]); // 清空选择
+    fetchSkusWithHandling(); // Reload data
+    setSelectedRowKeys([]); // Clear selection
   };
 
 
   const handleModalSubmit = async (values) => {
     setLoading(true);
     setErrorMessages([]);
-    setFormApiFieldErrors([]); // <--- 在提交前清空字段错误
+    setFormApiFieldErrors([]); // Clear field errors before submission
 
-    // 添加临时字段 push_to_wms
+    // Add temporary field push_to_wms
     const submissionData = { ...values, push_to_wms: true };
 
     try {
       if (editingSku && editingSku.id) {
-        // 对于更新操作，确保 ID 不被包含在提交的 body 数据中，且 push_to_wms 被添加
+        // For update operations, ensure ID is not included in the submitted body data, and push_to_wms is added
         const { id, ...updateValuesSansId } = submissionData;
         await updateSku(editingSku.id, updateValuesSansId);
-        message.success('SKU 更新成功!');
+        message.success('SKU updated successfully!');
       } else {
-        // 对于创建操作，直接使用添加了 push_to_wms 的 submissionData
+        // For create operations, use submissionData directly with push_to_wms
         await createSku(submissionData);
-        message.success('SKU 创建成功!');
+        message.success('SKU created successfully!');
       }
       setIsModalOpen(false);
-      fetchSkusWithHandling(); // 重新加载数据
-      return true; // <--- 新增：操作成功时返回 true
+      fetchSkusWithHandling(); // Reload data
+      return true; // Return true on successful operation
     } catch (error) {
-      console.error('操作 SKU 失败:', error);
-      message.error(`${editingSku ? '更新' : '创建'} SKU 失败: ${error.message}`);
+      console.error('SKU operation failed:', error);
+      message.error(`${editingSku ? 'Update' : 'Create'} SKU failed: ${error.message}`);
       if (error.fieldErrors && Array.isArray(error.fieldErrors)) {
-        setErrorMessages(prev => [...prev, '表单提交失败，请检查以下字段的错误提示。']);
+        setErrorMessages(prev => [...prev, 'Form submission failed, please check error messages for specific fields.']);
         setFormApiFieldErrors(error.fieldErrors);
       } else {
-        setErrorMessages(prev => [...prev, `${editingSku ? '更新' : '创建'} SKU 失败: ${error.message}`]);
+        setErrorMessages(prev => [...prev, `${editingSku ? 'Update' : 'Create'} SKU failed: ${error.message}`]);
       }
-      return false; // <--- 新增：操作失败时返回 false
+      return false; // Return false on failed operation
     } finally {
       setLoading(false);
     }
@@ -180,12 +180,12 @@ const App = () => {
   const handleModalClose = () => {
     setIsModalOpen(false);
     setEditingSku(null);
-    setFormApiFieldErrors([]); // <--- 关闭模态框时清空字段错误
+    setFormApiFieldErrors([]); // Clear field errors when modal closes
   };
 
   const handleExport = () => {
     if (dataSource.length === 0) {
-        message.warning('没有数据可以导出！');
+        message.warning('No data to export!');
         return;
     }
     const dataToExport = (selectedRowKeys.length > 0
@@ -200,7 +200,7 @@ const App = () => {
     });
 
     if (dataToExport.length === 0) {
-        message.warning('没有选中的数据可以导出！');
+        message.warning('No selected data to export!');
         return;
     }
 
@@ -208,7 +208,7 @@ const App = () => {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
     XLSX.writeFile(workbook, selectedRowKeys.length > 0 ? "selected_sku_data.xlsx" : "all_sku_data.xlsx");
-    message.success(selectedRowKeys.length > 0 ? '选中的数据已导出!' : '全部数据已导出!');
+    message.success(selectedRowKeys.length > 0 ? 'Selected data exported!' : 'All data exported!');
   };
 
 
@@ -219,25 +219,25 @@ const App = () => {
     try {
       const response = await uploadSkuCsv(file);
       if (response.failure_count > 0) {
-        message.warning(`部分 SKU 上传失败: ${response.failure_count} 个失败。详情请查看控制台或错误提示。`);
-        const uploadErrors = response.failures.map(f => `行 ${f.row}: ${JSON.stringify(f.error) || '未知错误'}`);
+        message.warning(`Some SKUs failed to upload: ${response.failure_count} failures. See console or error messages for details.`);
+        const uploadErrors = response.failures.map(f => `Row ${f.row}: ${JSON.stringify(f.error) || 'Unknown error'}`);
         setErrorMessages(uploadErrors);
-        console.error("CSV上传失败详情:", response.failures);
+        console.error("CSV upload failure details:", response.failures);
       }
       if (response.success_count > 0) {
-        message.success(`成功上传 ${response.success_count} 个 SKU!`);
+        message.success(`Successfully uploaded ${response.success_count} SKUs!`);
       }
        if (response.success_count === 0 && response.failure_count === 0 && response.message) {
          message.info(response.message);
       } else if (response.success_count === 0 && response.failure_count === 0) {
-         message.info("上传完成，但没有 SKU 被处理。文件可能为空或不符合预期。");
+         message.info("Upload complete, but no SKUs were processed. File might be empty or not as expected.");
       }
       onSuccess(response, file);
       fetchSkusWithHandling();
     } catch (error) {
-      console.error('CSV 上传失败:', error);
-      message.error(`CSV 上传失败: ${error.message}`);
-      setErrorMessages(prev => [...prev, `CSV 上传失败: ${error.message}`]);
+      console.error('CSV upload failed:', error);
+      message.error(`CSV upload failed: ${error.message}`);
+      setErrorMessages(prev => [...prev, `CSV upload failed: ${error.message}`]);
       onError(error);
     } finally {
       setLoading(false);
@@ -247,10 +247,10 @@ const App = () => {
   return (
     <ConfigProvider locale={zhCN}>
       <div className="App">
-        <h1 style={{ color: 'black' }}>SKU 管理系统</h1>
+        <h1 style={{ color: 'black' }}>SKU Management System</h1>
         {errorMessages.length > 0 && (
           <Alert
-            message="发生错误"
+            message="An error occurred"
             description={
               <ul>
                 {errorMessages.map((msg, index) => (
@@ -266,7 +266,7 @@ const App = () => {
         )}
         <Space style={{ marginBottom: 16 }}>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-            创建 SKU
+            Create SKU
           </Button>
           <Upload
             ref={fileInputRef}
@@ -274,20 +274,20 @@ const App = () => {
             showUploadList={false}
             accept=".csv"
           >
-            <Button icon={<UploadOutlined />}>上传 CSV</Button>
+            <Button icon={<UploadOutlined />}>Upload CSV</Button>
           </Upload>
           <Button icon={<ExportOutlined />} onClick={handleExport}>
-            {selectedRowKeys.length > 0 ? `导出选中 (${selectedRowKeys.length})` : '导出全部'}
+            {selectedRowKeys.length > 0 ? `Export Selected (${selectedRowKeys.length})` : 'Export All'}
           </Button>
           {selectedRowKeys.length > 0 && (
             <Popconfirm
-                title={`确定删除选中的 ${selectedRowKeys.length} 个SKU吗？`}
+                title={`Are you sure to delete ${selectedRowKeys.length} selected SKUs?`}
                 onConfirm={handleDeleteSelected}
-                okText="是"
-                cancelText="否"
+                okText="Yes"
+                cancelText="No"
             >
                 <Button danger icon={<DeleteOutlined />}>
-                    删除选中 ({selectedRowKeys.length})
+                    Delete Selected ({selectedRowKeys.length})
                 </Button>
             </Popconfirm>
           )}

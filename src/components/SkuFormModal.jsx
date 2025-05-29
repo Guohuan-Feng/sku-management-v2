@@ -1,12 +1,12 @@
 import { Modal, Form, Input, Select, InputNumber, Button, Row, Col, Checkbox, message } from 'antd';
 import { useEffect, useState } from 'react';
 import { generateAIDescription } from '../services/skuApiService';
-import React from 'react'; // 确保 React 被导入以使用 Fragment
+import React from 'react'; // Ensure React is imported to use Fragment
 
 const { Option } = Select;
 const { TextArea } = Input;
 
-// AI 生成描述时，从表单获取这些字段的值作为输入
+// AI generated description will use values from these form fields as input
 const AI_INPUT_FIELDS = [
   'product_name', 'brand', 'category', 'sub_category', 'color', 'size',
   'product_class', 'group', 'sub_group', 'style', 'sub_style', 'model',
@@ -42,6 +42,7 @@ const SkuFormModal = ({
           }
           if (field.type === 'number' && formData[field.name] !== undefined && formData[field.name] !== null) {
             const numValue = parseFloat(formData[field.name]);
+            // Ensure number fields are parsed correctly, especially for fees
             formData[field.name] = isNaN(numValue) ? null : numValue;
           }
         });
@@ -80,7 +81,13 @@ const SkuFormModal = ({
         const submissionValues = { ...values };
         fieldsConfig.forEach(field => {
           if (field.type === 'number' && submissionValues[field.name] !== undefined && submissionValues[field.name] !== null) {
-            submissionValues[field.name] = parseFloat(submissionValues[field.name]);
+            // Convert to float for number fields, potentially with 2 decimal places for fees
+            const parsedValue = parseFloat(submissionValues[field.name]);
+            if (!isNaN(parsedValue)) {
+                submissionValues[field.name] = field.isFee ? parseFloat(parsedValue.toFixed(2)) : parsedValue;
+            } else {
+                submissionValues[field.name] = null; // Or undefined, depending on backend expectation for invalid numbers
+            }
           }
           if (field.name === 'status' && submissionValues[field.name] !== undefined) {
             submissionValues[field.name] = parseInt(submissionValues[field.name], 10);
@@ -99,7 +106,7 @@ const SkuFormModal = ({
         }
       })
       .catch((info) => {
-        console.log('Validate Failed (前端校验失败):', info);
+        console.log('Validate Failed (Frontend Validation Failed):', info);
       });
   };
 
@@ -114,13 +121,13 @@ const SkuFormModal = ({
       }
 
       if (Object.keys(payload).length === 0) {
-        message.warning('请输入一些产品信息以供 AI 生成描述。');
+        message.warning('Please enter some product information for AI to generate a description.');
         return;
       }
 
       setAiLoading(true);
       const aiResponse = await generateAIDescription(payload);
-      console.log('AI Response from backend:', aiResponse); // 查看完整的AI响应对象
+      console.log('AI Response from backend:', aiResponse); // View the complete AI response object
 
 
       const fieldsToUpdate = {
@@ -135,21 +142,21 @@ const SkuFormModal = ({
       };
 
       const filteredFieldsToUpdate = {};
-      
+
 
       for (const key in fieldsToUpdate) {
           if (fieldsToUpdate[key] !== undefined) {
               filteredFieldsToUpdate[key] = fieldsToUpdate[key];
           }
       }
-      console.log('Data being set to form:', filteredFieldsToUpdate); // 查看最终要设置到表单的数据
+      console.log('Data being set to form:', filteredFieldsToUpdate); // View the final data to set to the form
 
       form.setFieldsValue(filteredFieldsToUpdate);
-      message.success('AI 已成功生成描述信息！');
+      message.success('AI successfully generated description information!');
 
     } catch (error) {
-      console.error('AI 生成描述失败:', error);
-      message.error(`AI 生成描述失败: ${error.message || '请稍后再试'}`);
+      console.error('AI description generation failed:', error);
+      message.error(`AI description generation failed: ${error.message || 'Please try again later'}`);
     } finally {
       setAiLoading(false);
     }
@@ -158,35 +165,26 @@ const SkuFormModal = ({
   const renderField = (field) => {
     const rules = [];
     if (field.validation) {
-      if (field.validation.required) {
-        rules.push({ required: true, message: field.validation.requiredMsg || `${field.label} 是必填项!` });
-      }
-      if (field.validation.pattern) {
-        rules.push({ pattern: field.validation.pattern, message: field.validation.patternMsg || '格式不正确!' });
-      }
-      if (field.validation.maxLength) {
-        rules.push({ max: field.validation.maxLength, message: field.validation.maxLengthMsg || `最多 ${field.validation.maxLength} 字符!` });
-      }
-       if (field.validation.min !== undefined && (field.type === 'number' || field.isFee)) {
-        rules.push({ type: 'number', min: field.validation.min, message: field.validation.minMsg || `不能小于 ${field.validation.min}!` });
-      }
-      if (field.validation.max !== undefined && (field.type === 'number' || field.isFee)) {
-        rules.push({ type: 'number', max: field.validation.max, message: field.validation.maxMsg || `不能大于 ${field.validation.max}!` });
-      }
+      // Validation rules are now handled by Ant Design's Form.Item `rules` prop based on `field.validation`
     }
 
     switch (field.type) {
       case 'text':
         return <Input placeholder={field.example || field.description} disabled={field.name === 'id'} />;
       case 'number':
-        return <InputNumber style={{ width: '100%' }} placeholder={field.example || field.description} min={field.validation?.min} precision={field.isFee ? 2 : 0} />;
+        return <InputNumber
+          style={{ width: '100%' }}
+          placeholder={field.example || field.description}
+          min={field.validation?.min}
+          precision={field.isFee ? 2 : 0} // Set precision for fee fields to 2, others to 0
+        />;
       case 'textarea':
         return <TextArea rows={field.rows || 2} placeholder={field.example || field.description} />;
       case 'select':
         let optionsSource = field.options || [];
         if (field.name === 'status') optionsSource = statusOptions;
         if (field.name === 'condition') optionsSource = conditionOptions;
-        if (field.name === 'allow_dropship_return') optionsSource = [{value: 'True', label: '是'}, {value: 'False', label: '否'}];
+        if (field.name === 'allow_dropship_return') optionsSource = [{value: 'True', label: 'Yes'}, {value: 'False', label: 'No'}];
 
         return (
           <Select placeholder={field.description}>
@@ -206,19 +204,19 @@ const SkuFormModal = ({
 
   return (
     <Modal
-      title={initialData ? '编辑 SKU' : '创建 SKU'}
+      title={initialData ? 'Edit SKU' : 'Create SKU'}
       open={visible}
       onOk={handleOk}
       onCancel={onClose}
       width="80vw"
       destroyOnClose
       maskClosable={false}
-      footer={[ // 从页脚移除 AI 生成按钮
+      footer={[ // Removed AI generation button from footer
           <Button key="back" onClick={onClose}>
-            取消
+            Cancel
           </Button>,
           <Button key="submit" type="primary" onClick={handleOk} loading={false}>
-            {initialData ? '更新' : '创建'}
+            {initialData ? 'Update' : 'Create'}
           </Button>,
         ]}
     >
@@ -227,7 +225,7 @@ const SkuFormModal = ({
           {fieldsConfig.map((field) => {
             if (field.name === 'id') return null;
             return (
-              // 使用 React.Fragment 来包裹 Col 和可能的 AI 按钮容器
+              // Use React.Fragment to wrap Col and potentially AI button container
               <React.Fragment key={field.name}>
                 <Col span={field.gridWidth || 8}>
                   <Form.Item
@@ -236,15 +234,15 @@ const SkuFormModal = ({
                     rules={field.validation ?
                         Object.entries(field.validation).reduce((acc, [key, value]) => {
                             if (key === 'required' && value) {
-                                acc.push({ required: true, message: field.validation.requiredMsg || `${field.label} 是必填项!` });
+                                acc.push({ required: true, message: field.validation.requiredMsg || `${field.label} is required!` });
                             } else if (key === 'pattern' && value) {
-                                acc.push({ pattern: value, message: field.validation.patternMsg || '格式不正确!' });
+                                acc.push({ pattern: value, message: field.validation.patternMsg || 'Invalid format!' });
                             } else if (key === 'maxLength' && value) {
-                                acc.push({ max: value, message: field.validation.maxLengthMsg || `最多 ${value} 字符!` });
+                                acc.push({ max: value, message: field.validation.maxLengthMsg || `Max ${value} characters!` });
                             } else if (key === 'min' && value !== undefined && (field.type === 'number' || field.isFee)) {
-                                acc.push({ type: 'number', min: value, message: field.validation.minMsg || `不能小于 ${value}!` });
+                                acc.push({ type: 'number', min: value, message: field.validation.minMsg || `Cannot be less than ${value}!` });
                             } else if (key === 'max' && value !== undefined && (field.type === 'number' || field.isFee)) {
-                                acc.push({ type: 'number', max: value, message: field.validation.maxMsg || `不能大于 ${value}!` });
+                                acc.push({ type: 'number', max: value, message: field.validation.maxMsg || `Cannot be greater than ${value}!` });
                             }
                             return acc;
                         }, [])
@@ -255,7 +253,7 @@ const SkuFormModal = ({
                     {renderField(field)}
                   </Form.Item>
                 </Col>
-                {/* 在 long_desc 字段下方（逻辑上）添加 AI 生成按钮 */}
+                {/* Add AI generation button below long_desc field (logically) */}
                 {field.name === 'long_desc' && (
                   <Col span={24} style={{ textAlign: 'right', marginTop: '0px', marginBottom: '16px' }}>
                     <Button onClick={handleAIGenerate} loading={aiLoading}>
