@@ -1,8 +1,17 @@
-import { Modal, Form, Input, Select, InputNumber, Button, Row, Col, Checkbox } from 'antd';
-import { useEffect } from 'react';
+import { Modal, Form, Input, Select, InputNumber, Button, Row, Col, Checkbox, message } from 'antd';
+import { useEffect, useState } from 'react';
+import { generateAIDescription } from '../services/skuApiService';
+import React from 'react'; // 确保 React 被导入以使用 Fragment
 
 const { Option } = Select;
 const { TextArea } = Input;
+
+// AI 生成描述时，从表单获取这些字段的值作为输入
+const AI_INPUT_FIELDS = [
+  'product_name', 'brand', 'category', 'sub_category', 'color', 'size',
+  'product_class', 'group', 'sub_group', 'style', 'sub_style', 'model',
+  'gender', 'keywords'
+];
 
 const SkuFormModal = ({
   visible,
@@ -15,12 +24,11 @@ const SkuFormModal = ({
   apiFieldErrors,
 }) => {
   const [form] = Form.useForm();
+  const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
     if (visible) {
       if (initialData) {
-        // AntD Form在处理数字类型的Select时，如果其值在options中是字符串，需要转换
-        // 同时处理数字和布尔值类型，以确保表单正确填充
         const formData = { ...initialData };
         fieldsConfig.forEach(field => {
           if (field.type === 'select') {
@@ -28,11 +36,10 @@ const SkuFormModal = ({
                 if (formData[field.name] !== undefined && formData[field.name] !== null) {
                     formData[field.name] = String(formData[field.name]);
                 }
-             } else if (field.name === 'allow_dropship_return') { // 布尔类型转为字符串
+             } else if (field.name === 'allow_dropship_return') {
                 formData[field.name] = String(formData[field.name]);
              }
           }
-          // 对于数字输入，确保它们是数字类型，而不是字符串
           if (field.type === 'number' && formData[field.name] !== undefined && formData[field.name] !== null) {
             const numValue = parseFloat(formData[field.name]);
             formData[field.name] = isNaN(numValue) ? null : numValue;
@@ -40,13 +47,11 @@ const SkuFormModal = ({
         });
         form.setFieldsValue(formData);
       } else {
-        // 为创建新SKU时设置默认值
         const defaultValues = {};
         fieldsConfig.forEach(field => {
           if (field.defaultValue !== undefined) {
             defaultValues[field.name] = field.defaultValue;
           }
-           // 特别处理布尔值的Select
           if (field.name === 'allow_dropship_return' && field.defaultValue !== undefined) {
             defaultValues[field.name] = String(field.defaultValue);
           }
@@ -58,26 +63,20 @@ const SkuFormModal = ({
     }
   }, [visible, initialData, form, fieldsConfig]);
 
-  // 新的 useEffect 用于处理来自 API 的字段错误
   useEffect(() => {
     if (apiFieldErrors && apiFieldErrors.length > 0) {
       const antdFieldErrors = apiFieldErrors.map(err => ({
-        name: err.loc[err.loc.length - 1], // FastAPI通常将字段名放在loc数组的最后
+        name: err.loc[err.loc.length - 1],
         errors: [err.msg],
       }));
       form.setFields(antdFieldErrors);
     }
-    // 注意：当 apiFieldErrors 变为空数组时（例如 App.jsx 中清空时），
-    // 不需要显式清除 form.setFields 设置的错误，因为下次 validateFields 或 setFieldsValue 会覆盖它们。
-    // 如果确实需要主动清除，可以在 App.jsx 清空 apiFieldErrors 后，再调用 form.resetFields() 或 form.setFields([])，但这需要更复杂的 prop 传递或 ref 使用。
-    // 目前的设计是，错误在下次提交前或关闭模态框时由 App.jsx 清空 formApiFieldErrors，下次打开模态框时 apiFieldErrors 会是空数组。
   }, [apiFieldErrors, form]);
 
   const handleOk = () => {
     form
       .validateFields()
       .then(async (values) => {
-        // 在提交前转换回后端期望的类型
         const submissionValues = { ...values };
         fieldsConfig.forEach(field => {
           if (field.type === 'number' && submissionValues[field.name] !== undefined && submissionValues[field.name] !== null) {
@@ -95,19 +94,65 @@ const SkuFormModal = ({
         });
 
         const success = await onSubmit(submissionValues);
-
         if (success) {
-          form.resetFields(); // 仅在成功时重置表单
-          // onClose(); // App.jsx 中的 onSubmit 成功后会处理关闭逻辑
-        } else {
-          // 当 onSubmit 返回 false (即发生错误) 时，模态框不关闭，表单不重置。
-          // 错误信息由 App.jsx 中的 Alert 组件显示。
+          form.resetFields();
         }
       })
       .catch((info) => {
         console.log('Validate Failed (前端校验失败):', info);
-        // 前端表单校验本身的错误会由 Form.Item 自动显示，这里可以不用额外处理
       });
+  };
+
+  const handleAIGenerate = async () => {
+    try {
+      const currentValues = form.getFieldsValue(AI_INPUT_FIELDS);
+      const payload = {};
+      for (const key in currentValues) {
+        if (currentValues[key] !== undefined && currentValues[key] !== null && String(currentValues[key]).trim() !== '') {
+          payload[key] = currentValues[key];
+        }
+      }
+
+      if (Object.keys(payload).length === 0) {
+        message.warning('请输入一些产品信息以供 AI 生成描述。');
+        return;
+      }
+
+      setAiLoading(true);
+      const aiResponse = await generateAIDescription(payload);
+      console.log('AI Response from backend:', aiResponse); // 查看完整的AI响应对象
+
+
+      const fieldsToUpdate = {
+        title: aiResponse['product title'],
+        short_desc: aiResponse['short description'],
+        long_desc: aiResponse['long description'],
+        key_features_1: aiResponse['key features 1'],
+        key_features_2: aiResponse['key features 2'],
+        key_features_3: aiResponse['key features 3'],
+        key_features_4: aiResponse['key features 4'],
+        key_features_5: aiResponse['key features 5'],
+      };
+
+      const filteredFieldsToUpdate = {};
+      
+
+      for (const key in fieldsToUpdate) {
+          if (fieldsToUpdate[key] !== undefined) {
+              filteredFieldsToUpdate[key] = fieldsToUpdate[key];
+          }
+      }
+      console.log('Data being set to form:', filteredFieldsToUpdate); // 查看最终要设置到表单的数据
+
+      form.setFieldsValue(filteredFieldsToUpdate);
+      message.success('AI 已成功生成描述信息！');
+
+    } catch (error) {
+      console.error('AI 生成描述失败:', error);
+      message.error(`AI 生成描述失败: ${error.message || '请稍后再试'}`);
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   const renderField = (field) => {
@@ -165,34 +210,62 @@ const SkuFormModal = ({
       open={visible}
       onOk={handleOk}
       onCancel={onClose}
-      width="80vw" // 或者更大的宽度，例如 1000
-      destroyOnHidden // 关闭时销毁 Modal 及其子元素，确保表单状态在下次打开时是最新的
+      width="80vw"
+      destroyOnClose
       maskClosable={false}
-      footer={[ // 自定义页脚按钮
+      footer={[ // 从页脚移除 AI 生成按钮
           <Button key="back" onClick={onClose}>
             取消
           </Button>,
-          <Button key="submit" type="primary" onClick={handleOk} loading={false /* TODO: 可添加提交加载状态 */}>
+          <Button key="submit" type="primary" onClick={handleOk} loading={false}>
             {initialData ? '更新' : '创建'}
           </Button>,
         ]}
     >
       <Form form={form} layout="vertical" name="skuForm">
         <Row gutter={16}>
-          {fieldsConfig.map((field) => (
-            // 确保 id 字段不可编辑且不在表单中直接显示，或者根本不包含在 fieldsConfig 中让其在表单中渲染
-            field.name === 'id' ? null :
-            <Col span={field.gridWidth || 8} key={field.name}>
-              <Form.Item
-                name={field.name}
-                label={field.label}
-                rules={renderField(field).props.rules || []} // 获取 field 自身的 rules
-                required={field.validation?.required} // 显式标记必填项的星号
-              >
-                {renderField(field)}
-              </Form.Item>
-            </Col>
-          ))}
+          {fieldsConfig.map((field) => {
+            if (field.name === 'id') return null;
+            return (
+              // 使用 React.Fragment 来包裹 Col 和可能的 AI 按钮容器
+              <React.Fragment key={field.name}>
+                <Col span={field.gridWidth || 8}>
+                  <Form.Item
+                    name={field.name}
+                    label={field.label}
+                    rules={field.validation ?
+                        Object.entries(field.validation).reduce((acc, [key, value]) => {
+                            if (key === 'required' && value) {
+                                acc.push({ required: true, message: field.validation.requiredMsg || `${field.label} 是必填项!` });
+                            } else if (key === 'pattern' && value) {
+                                acc.push({ pattern: value, message: field.validation.patternMsg || '格式不正确!' });
+                            } else if (key === 'maxLength' && value) {
+                                acc.push({ max: value, message: field.validation.maxLengthMsg || `最多 ${value} 字符!` });
+                            } else if (key === 'min' && value !== undefined && (field.type === 'number' || field.isFee)) {
+                                acc.push({ type: 'number', min: value, message: field.validation.minMsg || `不能小于 ${value}!` });
+                            } else if (key === 'max' && value !== undefined && (field.type === 'number' || field.isFee)) {
+                                acc.push({ type: 'number', max: value, message: field.validation.maxMsg || `不能大于 ${value}!` });
+                            }
+                            return acc;
+                        }, [])
+                        : []
+                    }
+                    required={field.validation?.required}
+                  >
+                    {renderField(field)}
+                  </Form.Item>
+                </Col>
+                {/* 在 long_desc 字段下方（逻辑上）添加 AI 生成按钮 */}
+                {field.name === 'long_desc' && (
+                  <Col span={24} style={{ textAlign: 'right', marginTop: '0px', marginBottom: '16px' }}>
+                    <Button onClick={handleAIGenerate} loading={aiLoading}>
+                      ✨ Use AI description
+                    </Button>
+                  </Col>
+                )}
+              </React.Fragment>
+            );
+          })}
         </Row>
       </Form>
     </Modal>

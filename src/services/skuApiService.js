@@ -1,4 +1,5 @@
 const API_BASE_URL = 'https://ebay-oauth.onrender.com/JFJP/skus'; // 从您提供的URL更新
+const AI_API_BASE_URL = 'https://ebay-oauth.onrender.com/JFJP'; // 新增 AI 服务的根 URL
 
 // 辅助函数处理 API 响应
 const handleResponse = async (response) => {
@@ -76,6 +77,18 @@ export const uploadSkuCsv = async (file) => {
     method: 'POST',
     body: formData,
     // 注意: 使用 FormData 时, Content-Type header 会由浏览器自动设置, 通常不需要手动指定
+  });
+  return handleResponse(response);
+};
+
+// 新增: 调用 AI 生成描述的 API
+export const generateAIDescription = async (data) => {
+  const response = await fetch(`${AI_API_BASE_URL}/AI-generate-desc`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
   });
   return handleResponse(response);
 };

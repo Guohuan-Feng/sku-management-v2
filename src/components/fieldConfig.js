@@ -79,7 +79,7 @@ const tempFieldsConfig = [
   },
   {
     name: 'product_name', label: 'Product Name', type: 'text', gridWidth: 8,
-    origValidation: { required: true, maxLength: 40, pattern: backendLimitedStrChPatternNotEmpty, patternMsg: '产品名称允许中文、字母、数字、空格。最多40字符。' },
+    origValidation: { required: true, maxLength: 100, pattern: backendLimitedStrChPatternNotEmpty, patternMsg: '产品名称允许中文、字母、数字、空格。最多100字符。' },
     description: '完整的产品名称。', example: '示例产品名称'
   },
   {

@@ -1,3 +1,4 @@
+// src/App.jsx
 import { useState, useEffect, useRef } from 'react';
 import './App.css';
 import { Table, ConfigProvider, Button, message, Upload, Space, Popconfirm, Alert } from 'antd';
@@ -143,13 +144,19 @@ const App = () => {
     setLoading(true);
     setErrorMessages([]);
     setFormApiFieldErrors([]); // <--- 在提交前清空字段错误
+
+    // 添加临时字段 push_to_wms
+    const submissionData = { ...values, push_to_wms: true };
+
     try {
       if (editingSku && editingSku.id) {
-        const { id, ...updateValues } = values;
-        await updateSku(editingSku.id, updateValues);
+        // 对于更新操作，确保 ID 不被包含在提交的 body 数据中，且 push_to_wms 被添加
+        const { id, ...updateValuesSansId } = submissionData;
+        await updateSku(editingSku.id, updateValuesSansId);
         message.success('SKU 更新成功!');
       } else {
-        await createSku(values);
+        // 对于创建操作，直接使用添加了 push_to_wms 的 submissionData
+        await createSku(submissionData);
         message.success('SKU 创建成功!');
       }
       setIsModalOpen(false);
@@ -158,10 +165,8 @@ const App = () => {
     } catch (error) {
       console.error('操作 SKU 失败:', error);
       message.error(`${editingSku ? '更新' : '创建'} SKU 失败: ${error.message}`);
-      // setErrorMessages(prev => [...prev, `${editingSku ? '更新' : '创建'} SKU 失败: ${error.message}`]);
-      // ^^^ 如果 fieldErrors 存在，优先使用更具体的字段错误提示，否则使用通用错误信息
       if (error.fieldErrors && Array.isArray(error.fieldErrors)) {
-        setErrorMessages(prev => [...prev, '表单提交失败，请检查以下字段的错误提示。']); 
+        setErrorMessages(prev => [...prev, '表单提交失败，请检查以下字段的错误提示。']);
         setFormApiFieldErrors(error.fieldErrors);
       } else {
         setErrorMessages(prev => [...prev, `${editingSku ? '更新' : '创建'} SKU 失败: ${error.message}`]);
@@ -213,7 +218,6 @@ const App = () => {
     setErrorMessages([]);
     try {
       const response = await uploadSkuCsv(file);
-      // 后端返回的 response 结构是 {"success_count": success, "failure_count": len(failures), "failures": failures}
       if (response.failure_count > 0) {
         message.warning(`部分 SKU 上传失败: ${response.failure_count} 个失败。详情请查看控制台或错误提示。`);
         const uploadErrors = response.failures.map(f => `行 ${f.row}: ${JSON.stringify(f.error) || '未知错误'}`);
@@ -224,18 +228,17 @@ const App = () => {
         message.success(`成功上传 ${response.success_count} 个 SKU!`);
       }
        if (response.success_count === 0 && response.failure_count === 0 && response.message) {
-         // 例如，文件为空或格式完全不符，但API服务已处理
          message.info(response.message);
       } else if (response.success_count === 0 && response.failure_count === 0) {
          message.info("上传完成，但没有 SKU 被处理。文件可能为空或不符合预期。");
       }
-      onSuccess(response, file); // Antd Upload onSuccess 回调
-      fetchSkusWithHandling(); // 重新加载数据
+      onSuccess(response, file);
+      fetchSkusWithHandling();
     } catch (error) {
       console.error('CSV 上传失败:', error);
       message.error(`CSV 上传失败: ${error.message}`);
       setErrorMessages(prev => [...prev, `CSV 上传失败: ${error.message}`]);
-      onError(error); // Antd Upload onError 回调
+      onError(error);
     } finally {
       setLoading(false);
     }
@@ -267,8 +270,8 @@ const App = () => {
           </Button>
           <Upload
             ref={fileInputRef}
-            customRequest={handleCsvUpload} // 使用 customRequest 来完全控制上传过程
-            showUploadList={false} // 不显示 Antd 的上传列表
+            customRequest={handleCsvUpload}
+            showUploadList={false}
             accept=".csv"
           >
             <Button icon={<UploadOutlined />}>上传 CSV</Button>
@@ -294,9 +297,9 @@ const App = () => {
           columns={tableColumns}
           dataSource={dataSource}
           loading={loading}
-          scroll={{ x: 'max-content', y: '60vh' }} // 限制表格高度并允许垂直滚动
+          scroll={{ x: 'max-content', y: '60vh' }}
           bordered
-          rowKey="key" // 确保每行都有唯一的key，我们已在 fetchSkus 中设置
+          rowKey="key"
         />
         <SkuFormModal
           visible={isModalOpen}
@@ -306,7 +309,7 @@ const App = () => {
           fieldsConfig={fieldsConfig}
           statusOptions={statusOptions}
           conditionOptions={conditionOptions}
-          apiFieldErrors={formApiFieldErrors} // <--- 将字段错误传递给模态框
+          apiFieldErrors={formApiFieldErrors}
         />
       </div>
     </ConfigProvider>
