@@ -1,37 +1,35 @@
 // src/App.jsx
+// 请确保以下 import 语句已存在于文件顶部
 import { useState, useEffect, useRef } from 'react';
 import './App.css';
 import { Table, ConfigProvider, Button, message, Upload, Space, Popconfirm, Alert, Form } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
-import * as XLSX from 'xlsx';
-import { fieldsConfig, statusOptions, conditionOptions } from './components/fieldConfig';
+import * as XLSX from 'xlsx'; // 用于 Excel 导出
+import { fieldsConfig, statusOptions, conditionOptions } from './components/fieldConfig'; // 确保路径正确
 import { UploadOutlined, EditOutlined, DeleteOutlined, PlusOutlined, ExportOutlined, SaveOutlined, CloseOutlined, EyeOutlined } from '@ant-design/icons';
-import SkuFormModal from './components/SkuFormModal';
-import EditableCell from './components/EditableCell';
-import { getAllSkus, createSku, updateSku, deleteSku, uploadSkuCsv } from './services/skuApiService';
+import SkuFormModal from './components/SkuFormModal'; // 确保路径正确
+import EditableCell from './components/EditableCell'; // 确保路径正确
+import { getAllSkus, createSku, updateSku, deleteSku, uploadSkuCsv } from './services/skuApiService'; // 确保路径正确
 
 const App = () => {
+  // ... (文件顶部的其他 state 和 useEffect hooks 保持不变)
   const [form] = Form.useForm();
   const [dataSource, setDataSource] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
-  const [isModalOpen, setIsModalOpen] = useState(false); // 用于 Create/Edit Modal
-  const [editingSku, setEditingSku] = useState(null); // 用于 Create/Edit Modal 的数据
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingSku, setEditingSku] = useState(null);
   const fileInputRef = useRef(null);
   const [errorMessages, setErrorMessages] = useState([]);
   const [formApiFieldErrors, setFormApiFieldErrors] = useState([]);
-
   const [editingKey, setEditingKey] = useState('');
-  const [editingRowData, setEditingRowData] = useState({}); // 新增状态：存储当前编辑行的实时数据
-
+  const [editingRowData, setEditingRowData] = useState({});
   const [isViewAllModalOpen, setIsViewAllModalOpen] = useState(false);
   const [viewingSku, setViewingSku] = useState(null);
 
-  // >>>>>>>>>>>>>> 确保 handleInlineFormValuesChange 定义在这里，在 Form 组件使用之前 <<<<<<<<<<<<<<<
   const handleInlineFormValuesChange = (changedValues, allValues) => {
     setEditingRowData(prev => ({ ...prev, ...changedValues }));
   };
-  // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
   const fetchSkusWithHandling = async () => {
     setLoading(true);
@@ -57,14 +55,10 @@ const App = () => {
   const isEditing = (record) => record.key === editingKey;
 
   const edit = (record) => {
-    // 如果有正在编辑的行，先处理它
     if (editingKey && editingKey !== record.key) {
-      // 提示用户保存或取消当前编辑，或者自动保存/取消
       message.warning('Please save or cancel the current editing row before editing another!');
-      return; // 阻止编辑新行
+      return;
     }
-
-    // 初始化 form 和 editingRowData
     const initialValues = { ...record };
     fieldsConfig.forEach(field => {
       if (field.type === 'select') {
@@ -78,32 +72,24 @@ const App = () => {
         initialValues[field.name] = String(initialValues[field.name]);
       }
     });
-
     form.setFieldsValue(initialValues);
-    setEditingRowData(initialValues); // 将当前行数据复制到编辑草稿状态
+    setEditingRowData(initialValues);
     setEditingKey(record.key);
   };
 
   const cancel = () => {
     setEditingKey('');
-    setEditingRowData({}); // 清空草稿数据
+    setEditingRowData({});
     setFormApiFieldErrors([]);
   };
 
-  // 保存编辑
   const save = async (key) => {
     setLoading(true);
     setErrorMessages([]);
     setFormApiFieldErrors([]);
-
     try {
-      // 从 form 中获取最新验证通过的值
       const validatedFields = await form.validateFields();
-
-      // 将 validatedFields 合并到 editingRowData 中，确保所有字段都存在
       const updatedItem = { ...editingRowData, ...validatedFields };
-
-      // 进行类型转换以符合后端API要求 (这部分逻辑保持不变)
       fieldsConfig.forEach(field => {
           if (field.type === 'number' && updatedItem[field.name] !== undefined && updatedItem[field.name] !== null) {
               const parsedValue = parseFloat(updatedItem[field.name]);
@@ -123,19 +109,14 @@ const App = () => {
               updatedItem[field.name] = updatedItem[field.name] === 'True' || updatedItem[field.name] === true;
           }
       });
-
-      const { key: _, ...apiPayload } = updatedItem; // 移除 key 字段
-
-      // 提交到后端
-      if (String(key).startsWith('new-temp-id')) { // 修正了 key.startsWith 错误
+      const { key: _, ...apiPayload } = updatedItem;
+      if (String(key).startsWith('new-temp-id')) {
         await createSku(apiPayload);
         message.success('SKU created successfully!');
-      } else { // 现有行
-        await updateSku(apiPayload.id, apiPayload); // 更新时使用真实的 ID
+      } else {
+        await updateSku(apiPayload.id, apiPayload);
         message.success('SKU updated successfully!');
       }
-
-      // 成功后，重新获取数据，清除编辑状态和草稿数据
       fetchSkusWithHandling();
       setEditingKey('');
       setEditingRowData({});
@@ -155,48 +136,23 @@ const App = () => {
     }
   };
 
-  // 定义表格默认显示的字段名称列表
-  const defaultDisplayFields = [
-    'vendor_sku',
-    'UPC',
-    'product_en_name',
-    'product_cn_name',
-    'dropship_price',
-    'brand',
-    'net_weight',
-    'gross_weight',
-    'product_height',
-    'product_length',
-    'product_width',
-    'box_height',
-    'box_length',
-    'box_width',
-    'main_image',
-    'size_chart_image',
-    'allow_dropship_return', 'condition', 'UOM', 'ship_from', 'ship_to', 'ship_carrier',
-    'title', 'short_desc', 'keywords', 'key_features_1', 'key_features_2',
-    'full_image', 'thumbnail_image',
-    'status'
-  ];
-
   const getTableColumns = () => {
     const orderedDisplayFields = [
-      'vendor_sku', 'UPC', 'product_en_name', 'product_cn_name', 'dropship_price', 'brand',
+      'vendor_sku', 'UPC', 'product_en_name', /* 'product_cn_name' is intentionally omitted for display based on export requirements but can be added if needed for UI */
+      'dropship_price', 'brand',
       'net_weight', 'gross_weight', 'product_height', 'product_length', 'product_width',
       'box_height', 'box_length', 'box_width', 'main_image', 'size_chart_image',
       'allow_dropship_return', 'condition', 'UOM', 'ship_from', 'ship_to', 'ship_carrier',
       'title', 'short_desc', 'keywords', 'key_features_1', 'key_features_2',
-      'full_image', 'thumbnail_image', 'status'
+      'full_image', 'thumbnail_image',
+      'status'
     ];
-
     const columnsToDisplay = orderedDisplayFields
       .map(fieldName => fieldsConfig.find(field => field.name === fieldName))
       .filter(Boolean);
-
     const generatedColumns = columnsToDisplay
       .map((field) => {
         if (field.name === 'id') return null;
-
         return {
           title: field.label,
           dataIndex: field.name,
@@ -218,8 +174,6 @@ const App = () => {
           }),
         };
       }).filter(Boolean);
-
-    // 添加操作列
     generatedColumns.push({
       title: 'Operation',
       dataIndex: 'operation',
@@ -228,7 +182,6 @@ const App = () => {
       width: 180,
       render: (_, record) => {
         const editable = isEditing(record);
-
         return editable ? (
           <Space size="small">
             <Button type="link" icon={<SaveOutlined />} onClick={() => save(record.key)} loading={loading}>
@@ -243,7 +196,6 @@ const App = () => {
         ) : (
           <Space size="small">
             <Button icon={<EditOutlined />} onClick={() => edit(record)} type="link">Edit</Button>
-            {/* Show All 按钮：点击后打开模态框显示所有字段 */}
             <Button
               icon={<EyeOutlined />}
               onClick={() => {
@@ -266,7 +218,6 @@ const App = () => {
         );
       },
     });
-
     return generatedColumns;
   };
 
@@ -284,10 +235,9 @@ const App = () => {
       message.warning('Please save or cancel the current editing row first!');
       return;
     }
-
     const newSku = {
       key: `new-temp-id-${Date.now()}`,
-      id: 'new-temp-id',
+      id: 'new-temp-id', // Temporary ID for new rows not yet saved to backend
       ...fieldsConfig.reduce((acc, field) => {
         if (field.defaultValue !== undefined) {
           acc[field.name] = field.defaultValue;
@@ -304,7 +254,7 @@ const App = () => {
         } else if (field.type === 'url') {
             acc[field.name] = null;
         } else {
-            if (field.isMandatory) {
+            if (field.isMandatory) { // Based on your updated fieldConfig logic
                 acc[field.name] = '';
             } else {
                 acc[field.name] = null;
@@ -313,30 +263,37 @@ const App = () => {
         return acc;
       }, {})
     };
-
     setDataSource([...dataSource, newSku]);
-    edit(newSku);
+    edit(newSku); // Make the new row editable
   };
 
-  const handleDelete = async (skuId) => {
+  const handleDelete = async (skuIdToDelete) => {
     setLoading(true);
     setErrorMessages([]);
     try {
-      if (skuId === editingKey && String(skuId).startsWith('new-temp-id')) {
-        setDataSource(dataSource.filter(item => item.key !== skuId));
-        setEditingKey('');
+      // If it's a new temporary row that hasn't been saved
+      if (editingKey === skuIdToDelete && String(skuIdToDelete).startsWith('new-temp-id')) {
+        setDataSource(dataSource.filter(item => item.key !== skuIdToDelete));
+        setEditingKey(''); // Clear editing state
         setEditingRowData({});
         message.success('New SKU discarded!');
-      } else {
-        await deleteSku(skuId);
+      } else { // Existing SKU from backend
+        const skuToDelete = dataSource.find(item => item.key === skuIdToDelete);
+        if (!skuToDelete || String(skuToDelete.id).startsWith('new-temp-id')) {
+            message.error('Cannot delete. SKU ID not found or is a temporary ID.');
+            setLoading(false);
+            return;
+        }
+        await deleteSku(skuToDelete.id); // Use actual ID for deletion
         message.success('SKU deleted successfully!');
-        fetchSkusWithHandling();
+        fetchSkusWithHandling(); // Refresh data
       }
-      setSelectedRowKeys(prevKeys => prevKeys.filter(k => k !== skuId));
+      // Update selectedRowKeys if the deleted key was selected
+      setSelectedRowKeys(prevKeys => prevKeys.filter(k => k !== skuIdToDelete));
     } catch (error) {
       console.error('Failed to delete SKU:', error);
       message.error(`Failed to delete SKU: ${error.message}`);
-      setErrorMessages(prev => [...prev, `Failed to delete SKU ID ${skuId}: ${error.message}`]);
+      setErrorMessages(prev => [...prev, `Failed to delete SKU ID ${skuIdToDelete}: ${error.message}`]);
     } finally {
       setLoading(false);
     }
@@ -351,69 +308,104 @@ const App = () => {
     setErrorMessages([]);
     let successCount = 0;
     const currentErrors = [];
-    const newSelectedRowKeys = [];
-    const newEditingRowData = { ...editingRowData };
+    const remainingSelectedKeys = [...selectedRowKeys]; // To keep track of keys that couldn't be deleted
 
-    for (const skuId of selectedRowKeys) {
+    for (const skuKey of selectedRowKeys) {
       try {
-        if (skuId === editingKey && String(skuId).startsWith('new-temp-id')) {
-            setDataSource(prev => prev.filter(item => item.key !== skuId));
+        if (editingKey === skuKey && String(skuKey).startsWith('new-temp-id')) {
+          setDataSource(prevDs => prevDs.filter(item => item.key !== skuKey));
+          if (editingKey === skuKey) {
             setEditingKey('');
             setEditingRowData({});
-            message.success('New SKU discarded!');
+          }
+          // No API call for unsaved new rows
+          successCount++; // Consider it a "successful deletion" from UI perspective
+          remainingSelectedKeys.splice(remainingSelectedKeys.indexOf(skuKey), 1);
         } else {
-            await deleteSku(skuId);
+          const skuToDelete = dataSource.find(item => item.key === skuKey);
+          if (skuToDelete && !String(skuToDelete.id).startsWith('new-temp-id')) {
+            await deleteSku(skuToDelete.id);
             successCount++;
+            remainingSelectedKeys.splice(remainingSelectedKeys.indexOf(skuKey), 1);
+          } else {
+            // This case should ideally not happen if row selection is managed correctly
+             currentErrors.push(`SKU with key ${skuKey} not found or is an unsaved new item.`);
+          }
         }
       } catch (error) {
-        console.error(`Failed to delete SKU ID ${skuId}:`, error);
-        currentErrors.push(`Failed to delete SKU ID ${skuId}: ${error.message}`);
-        newSelectedRowKeys.push(skuId);
+        console.error(`Failed to delete SKU with key ${skuKey}:`, error);
+        currentErrors.push(`Failed to delete SKU with key ${skuKey}: ${error.message}`);
       }
     }
+
     setLoading(false);
     if (successCount > 0) {
       message.success(`Successfully deleted ${successCount} SKUs!`);
     }
     if (currentErrors.length > 0) {
-      setErrorMessages(currentErrors);
-      message.error(`There were ${currentErrors.length} SKUs that failed to delete. Please check the prompts.`);
+      setErrorMessages(prev => [...prev, ...currentErrors]); // Append new errors
+      message.error(`There were ${currentErrors.length} SKUs that failed to delete or were already removed. Please check prompts.`);
     }
-    fetchSkusWithHandling();
-    setSelectedRowKeys(newSelectedRowKeys);
-    setEditingRowData(newEditingRowData);
+    if (successCount > 0 || selectedRowKeys.some(key => String(key).startsWith('new-temp-id'))) {
+         fetchSkusWithHandling(); // Refresh if any API deletion occurred or temp rows were removed
+    }
+    setSelectedRowKeys(remainingSelectedKeys); // Update selected keys to those that failed
   };
 
-  // 模态框提交处理函数 (修改点：新增 initialDataParam 参数)
+
   const handleModalSubmit = async (values, initialDataParam) => {
     setLoading(true);
     setFormApiFieldErrors([]);
-    console.log('handleModalSubmit: Received values:', values); // 新增日志
-    console.log('handleModalSubmit: Received initialDataParam:', initialDataParam); // 新增日志
-    console.log('handleModalSubmit: Type of values.id:', typeof values.id, 'Value of values.id:', values.id); // 新增日志
-
     try {
       let success = false;
-      if (initialDataParam) { // 根据 initialDataParam 是否存在判断是更新还是创建
-        // 修改点：使用 initialDataParam.id 来获取 SKU ID
-        await updateSku(initialDataParam.id, values); // 确保 values.id 包含了正确的 SKU ID
+      const submissionValues = { ...values }; // Use a copy
+
+       // Ensure ID from initialDataParam is used for updates
+      if (initialDataParam && initialDataParam.id) {
+        submissionValues.id = initialDataParam.id;
+      }
+
+
+      // Perform type conversions based on fieldsConfig
+      fieldsConfig.forEach(field => {
+        if (field.type === 'number' && submissionValues[field.name] !== undefined && submissionValues[field.name] !== null) {
+          const parsedValue = parseFloat(submissionValues[field.name]);
+          if (!isNaN(parsedValue)) {
+            submissionValues[field.name] = field.isFee ? parseFloat(parsedValue.toFixed(2)) : parsedValue;
+          } else {
+            submissionValues[field.name] = null;
+          }
+        }
+        if (field.name === 'status' && submissionValues[field.name] !== undefined) {
+          submissionValues[field.name] = parseInt(submissionValues[field.name], 10);
+        }
+        if (field.name === 'condition' && submissionValues[field.name] !== undefined) {
+          submissionValues[field.name] = parseInt(submissionValues[field.name], 10);
+        }
+        if (field.name === 'allow_dropship_return' && submissionValues[field.name] !== undefined) {
+          submissionValues[field.name] = submissionValues[field.name] === 'True' || submissionValues[field.name] === true;
+        }
+      });
+
+
+      if (initialDataParam && initialDataParam.id && !String(initialDataParam.id).startsWith('new-temp-id')) { // Check if it's an existing SKU
+        await updateSku(initialDataParam.id, submissionValues);
         message.success('SKU updated successfully!');
         success = true;
-      } else {
-        const { id: _, ...payload } = values; // 创建新 SKU 时移除临时 id
+      } else { // New SKU creation
+        const { id: tempId, ...payload } = submissionValues; // Remove temporary 'id' if present
         await createSku(payload);
         message.success('SKU created successfully!');
         success = true;
       }
-      if (success) {
-        fetchSkusWithHandling(); // 重新获取数据
 
-        // 根据 initialDataParam 的来源关闭正确的模态框
-        if (initialDataParam === editingSku) { // 如果是编辑操作的模态框
+      if (success) {
+        fetchSkusWithHandling();
+        if (initialDataParam === editingSku) {
             handleModalClose();
-        } else if (initialDataParam === viewingSku) { // 如果是查看所有字段的模态框
+        } else if (initialDataParam === viewingSku) {
             handleViewAllModalClose();
-        } else { // 否则认为是创建操作的模态框
+        } else {
             handleModalClose();
         }
       }
@@ -433,22 +425,216 @@ const App = () => {
     }
   };
 
-
   const handleModalClose = () => { setIsModalOpen(false); setEditingSku(null); setFormApiFieldErrors([]); };
-  const handleViewAllModalClose = () => { setIsViewAllModalOpen(false); setViewingSku(null); setFormApiFieldErrors([]); }; // 清空错误信息
-  const handleExport = () => { /* ... (unchanged) ... */ };
-  const handleCsvUpload = async (options) => { /* ... (unchanged) ... */ };
+  const handleViewAllModalClose = () => { setIsViewAllModalOpen(false); setViewingSku(null); setFormApiFieldErrors([]); };
 
+  const handleExport = () => {
+    const exportFieldsOrder = [
+      { header: 'Vendor SKU', dataKey: 'vendor_sku' },
+      { header: 'UPC', dataKey: 'UPC' },
+      { header: 'Product Name', dataKey: 'product_en_name' },
+      { header: 'Status', dataKey: 'status', type: 'status' },
+      { header: 'ATS', dataKey: 'ATS' },
+      { header: 'Dropship Price', dataKey: 'dropship_price' },
+      { header: 'MSRP$', dataKey: 'MSRP' },
+      { header: '$ HDL for Shipping', dataKey: 'HDL_for_shipping' },
+      { header: '$ HDL for Receiving', dataKey: 'HDL_for_receiving' },
+      { header: '$ HDL for Returning', dataKey: 'HDL_for_returning' },
+      { header: '$ Storage Monthly', dataKey: 'storage_monthly' },
+      { header: 'Allow Dropship Return', dataKey: 'allow_dropship_return', type: 'booleanToLabel' },
+      { header: 'Shipping Lead Time', dataKey: 'shipping_lead_time' },
+      { header: 'Division', dataKey: 'division' },
+      { header: 'Department', dataKey: 'department' },
+      { header: 'Category', dataKey: 'category' },
+      { header: 'Subcategory', dataKey: 'sub_category' },
+      { header: 'Class', dataKey: 'product_class' },
+      { header: 'Group', dataKey: 'group' },
+      { header: 'Subgroup', dataKey: 'subgroup' },
+      { header: 'Style', dataKey: 'style' },
+      { header: 'Substyle', dataKey: 'sub_style' },
+      { header: 'Brand', dataKey: 'brand' },
+      { header: 'Model', dataKey: 'model' },
+      { header: 'Color', dataKey: 'color' },
+      { header: 'Size', dataKey: 'size' },
+      { header: 'OptionName1', dataKey: 'option_1' },
+      { header: 'OptionName2', dataKey: 'option_2' },
+      { header: 'OptionName3', dataKey: 'option_3' },
+      { header: 'OptionName4', dataKey: 'option_4' },
+      { header: 'OptionName5', dataKey: 'option_5' },
+      { header: 'Gender', dataKey: 'gender' },
+      { header: 'Age Group', dataKey: 'age_group' },
+      { header: 'Country Of Origin', dataKey: 'country_of_region' },
+      { header: 'Color Code NRF', dataKey: 'color_code_NRF' },
+      { header: 'Color Desc', dataKey: 'color_desc' },
+      { header: 'Size Code NRF', dataKey: 'size_code_NRF' },
+      { header: 'Size Desc', dataKey: 'size_desc' },
+      { header: 'Manufacturer', dataKey: 'manufacturer' },
+      { header: 'OEM', dataKey: 'OEM' },
+      { header: 'Product Year', dataKey: 'product_year' },
+      { header: 'Condition', dataKey: 'condition', type: 'condition' },
+      { header: 'Prepack #', dataKey: 'prepack_code' },
+      { header: 'Remark', dataKey: 'remark' },
+      { header: 'Harmonized #', dataKey: 'harmonized_code' },
+      { header: 'UOM', dataKey: 'UOM' },
+      { header: 'Net Weight', dataKey: 'net_weight' },
+      { header: 'Gross Weight', dataKey: 'gross_weight' },
+      { header: 'Product Height', dataKey: 'product_height' },
+      { header: 'Product Length', dataKey: 'product_length' },
+      { header: 'Product Width', dataKey: 'product_width' },
+      { header: 'Box Height', dataKey: 'box_height' },
+      { header: 'Box Length', dataKey: 'box_length' },
+      { header: 'Box Width', dataKey: 'box_width' },
+      { header: 'Qty/Case', dataKey: 'qty_case' },
+      { header: 'Qty/Box', dataKey: 'qty_box' },
+      { header: 'Material Content', dataKey: 'material_content' },
+      { header: 'Tags', dataKey: 'tag' },
+      { header: 'Care Instructions', dataKey: 'care_instructions' },
+      { header: 'Ship From', dataKey: 'ship_from' },
+      { header: 'Ship To', dataKey: 'ship_to' },
+      { header: 'Ship Carrier', dataKey: 'ship_carrier' },
+      { header: 'Shipping Description', dataKey: 'ship_desc' },
+      { header: 'Return Policy', dataKey: 'return_policy' },
+      { header: 'Security Privacy', dataKey: 'security_privacy' },
+      { header: 'Dropship Description', dataKey: 'dropship_desc' },
+      { header: 'Title', dataKey: 'title' },
+      { header: 'Short Description', dataKey: 'short_desc' },
+      { header: 'Long Description', dataKey: 'long_desc' },
+      { header: 'Dropship Listing Title', dataKey: 'dropship_listing_title' },
+      { header: 'Dropship Short Description', dataKey: 'dropship_short_desc' },
+      { header: 'Dropship Long Description', dataKey: 'dropship_long_desc' },
+      { header: 'Keywords', dataKey: 'keywords' },
+      { header: 'Google Product Category', dataKey: 'google_product_category' },
+      { header: 'Google Product Type', dataKey: 'google_product_type' },
+      { header: 'Facebook Product Category', dataKey: 'facebook_product_category' },
+      { header: 'Color Map', dataKey: 'color_map' },
+      { header: 'Key Features 1', dataKey: 'key_features_1' },
+      { header: 'Key Features 2', dataKey: 'key_features_2' },
+      { header: 'Key Features 3', dataKey: 'key_features_3' },
+      { header: 'Key Features 4', dataKey: 'key_features_4' },
+      { header: 'Key Features 5', dataKey: 'key_features_5' },
+      { header: 'Main Image', dataKey: 'main_image' },
+      { header: 'Front Image', dataKey: 'front_image' },
+      { header: 'Back Image', dataKey: 'back_image' },
+      { header: 'Side Image', dataKey: 'side_image' },
+      { header: 'Detail Image', dataKey: 'detail_image' },
+      { header: 'Full Image', dataKey: 'full_image' },
+      { header: 'Thumbnail Image', dataKey: 'thumbnail_image' },
+      { header: 'Size Chart Image', dataKey: 'size_chart_image' },
+      { header: 'Swatch Image', dataKey: 'swatch_image' },
+      { header: 'Additional Image 1', dataKey: 'additional_image_1' },
+      { header: 'Additional Image 2', dataKey: 'additional_image_2' },
+      { header: 'Additional Image 3', dataKey: 'additional_image_3' },
+      { header: 'Main Video', dataKey: 'main_video' },
+      { header: 'Additional Video 1', dataKey: 'additional_video_1' },
+      { header: 'Material 1 Name', dataKey: 'material_name_1' },
+      { header: 'Material 1 Percentage', dataKey: 'material_1_percentage' },
+      { header: 'Material 2 Name', dataKey: 'material_name_2' },
+      { header: 'Material 2 Percentage', dataKey: 'material_2_percentage' },
+      { header: 'Material 3 Name', dataKey: 'material_name_3' },
+      { header: 'Material 3 Percentage', dataKey: 'material_3_percentage' },
+      { header: 'Material 4 Name', dataKey: 'material_name_4' },
+      { header: 'Material 4 Percentage', dataKey: 'material_4_percentage' },
+      { header: 'Material 5 Name', dataKey: 'material_name_5' },
+      { header: 'Material 5 Percentage', dataKey: 'material_5_percentage' },
+      { header: 'Additional Color 1', dataKey: 'additional_color_1' },
+      { header: 'Additional Color 2', dataKey: 'additional_color_2' },
+    ];
 
+    const dataToExport = selectedRowKeys.length > 0
+      ? dataSource.filter(item => selectedRowKeys.includes(item.key))
+      : dataSource;
+
+    if (dataToExport.length === 0) {
+      message.warning('No data to export.');
+      return;
+    }
+
+    const getLabel = (options, value) => {
+      const stringValue = value !== undefined && value !== null ? String(value) : undefined;
+      const option = options.find(opt => opt.value === stringValue);
+      return option ? option.label : stringValue;
+    };
+
+    const sheetData = dataToExport.map(sku => {
+      return exportFieldsOrder.map(field => {
+        let value = sku[field.dataKey];
+        if (field.type === 'status') {
+          value = getLabel(statusOptions, value);
+        } else if (field.type === 'condition') {
+          value = getLabel(conditionOptions, value);
+        } else if (field.type === 'booleanToLabel') {
+          const valStr = String(sku[field.dataKey]).toLowerCase();
+          if (valStr === 'true') {
+              value = 'Yes';
+          } else if (valStr === 'false') {
+              value = 'No';
+          } else { // Fallback for unexpected values, or if it's already 'Yes'/'No'
+              value = sku[field.dataKey];
+          }
+        }
+        return value !== undefined && value !== null ? value : '';
+      });
+    });
+
+    const headers = exportFieldsOrder.map(field => field.header);
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...sheetData]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'SKUs');
+
+    const now = new Date();
+    const timestamp = `${now.getFullYear().toString().slice(-2)}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}${now.getSeconds().toString().padStart(2, '0')}`;
+    XLSX.writeFile(workbook, `skus_${timestamp}.xlsx`);
+    message.success('SKU data exported successfully!');
+  };
+
+  const handleCsvUpload = async (options) => {
+    const { file, onSuccess, onError } = options;
+    setLoading(true);
+    setErrorMessages([]);
+    try {
+      const response = await uploadSkuCsv(file);
+      onSuccess(response, file); // Pass response and file to onSuccess
+      message.success(`${file.name} uploaded and processed successfully!`);
+      fetchSkusWithHandling(); // Refresh data after upload
+    } catch (error) {
+      console.error("CSV Upload failed:", error);
+      let errorMessage = `Failed to upload ${file.name}: `;
+      if (error.fieldErrors && Array.isArray(error.fieldErrors)) {
+        // If fieldErrors are available (e.g., from FastAPI 422 response)
+        const detailedErrors = error.fieldErrors.map(fe => {
+          const fieldName = fe.loc && fe.loc.length > 1 ? fe.loc[fe.loc.length -1] : 'Unknown field';
+          return `${fieldName}: ${fe.msg}`;
+        }).join('; ');
+        errorMessage += `Validation errors: ${detailedErrors}`;
+         setErrorMessages(prev => [...prev, `Validation errors in ${file.name}: ${detailedErrors}`]);
+      } else if (error.message) {
+        // General error message
+        errorMessage += error.message;
+         setErrorMessages(prev => [...prev, `Upload error for ${file.name}: ${error.message}`]);
+      } else {
+        errorMessage += 'Unknown error during upload.';
+        setErrorMessages(prev => [...prev, `Upload error for ${file.name}: Unknown error.`]);
+      }
+      onError(error); // Pass error to onError
+      message.error(errorMessage, 10); // Display error message for longer
+    } finally {
+      setLoading(false);
+      if (fileInputRef.current && fileInputRef.current.fileList) {
+        fileInputRef.current.fileList = []; // Clear file input
+      }
+    }
+  };
+
+  // ... (JSX rendant la partie UI de l'application)
   return (
     <ConfigProvider locale={zhCN}>
       <div className="App">
         <h1 style={{ color: 'black' }}>SKU Management System</h1>
         {errorMessages.length > 0 && (
           <Alert
-            message="An error occurred"
+            message="Operation Information / Errors"
             description={
-              <ul>
+              <ul style={{ maxHeight: '150px', overflowY: 'auto' }}>
                 {errorMessages.map((msg, index) => (
                   <li key={index}>{msg}</li>
                 ))}
@@ -461,7 +647,6 @@ const App = () => {
           />
         )}
         <Space style={{ marginBottom: 16 }}>
-          {/* 模态框新增按钮保留 */}
           <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingSku(null); setIsModalOpen(true); }}>
             Create SKU (Modal)
           </Button>
@@ -503,37 +688,40 @@ const App = () => {
             scroll={{ x: 'max-content', y: '60vh' }}
             bordered
             rowKey="key"
+            pagination={{
+                onChange: cancel, // Cancel editing when pagination changes
+                pageSizeOptions: ['10', '20', '50', '100', '200'],
+                showSizeChanger: true,
+                defaultPageSize: 20,
+              }}
           />
         </Form>
-        {/* 将新增行按钮移动到表格下方，并左对齐 */}
         <div style={{ textAlign: 'left', marginTop: '16px' }}>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAddInline}>
                 Add New SKU (Inline)
             </Button>
         </div>
-        {/* 用于创建/编辑 SKU 的模态框，现在也使用 showAllMode 布局 */}
         <SkuFormModal
           visible={isModalOpen}
           onClose={handleModalClose}
-          onSubmit={(values) => handleModalSubmit(values, editingSku)} // 修改点：传递 editingSku
+          onSubmit={(values) => handleModalSubmit(values, editingSku)}
           initialData={editingSku}
           fieldsConfig={fieldsConfig}
           statusOptions={statusOptions}
           conditionOptions={conditionOptions}
           apiFieldErrors={formApiFieldErrors}
-          showAllMode={true} // 设置为 showAllMode，以便统一布局
+          showAllMode={true}
         />
-        {/* 用于显示所有字段的模态框，现在支持编辑 */}
         <SkuFormModal
           visible={isViewAllModalOpen}
           onClose={handleViewAllModalClose}
-          onSubmit={(values) => handleModalSubmit(values, viewingSku)} // 修改点：传递 viewingSku
+          onSubmit={(values) => handleModalSubmit(values, viewingSku)}
           initialData={viewingSku}
           fieldsConfig={fieldsConfig}
           statusOptions={statusOptions}
           conditionOptions={conditionOptions}
           apiFieldErrors={formApiFieldErrors}
-          showAllMode={true} // 设置为 showAllMode
+          showAllMode={true}
         />
       </div>
     </ConfigProvider>

@@ -1,0 +1,110 @@
+以下是你提供的字段，按顺序标注了 1 到 108 的编号：
+
+1. Vendor SKU
+2. UPC
+3. Product Name
+4. Status
+5. ATS
+6. Dropship Price
+7. MSRP\$
+8. \$ HDL for Shipping
+9. \$ HDL for Receiving
+10. \$ HDL for Returning
+11. \$ Storage Monthly
+12. Allow Dropship Return
+13. Shipping Lead Time
+14. Division
+15. Department
+16. Category
+17. Subcategory
+18. Class
+19. Group
+20. Subgroup
+21. Style
+22. Substyle
+23. Brand
+24. Model
+25. Color
+26. Size
+27. OptionName1
+28. OptionName2
+29. OptionName3
+30. OptionName4
+31. OptionName5
+32. Gender
+33. Age Group
+34. Country Of Origin
+35. Color Code NRF
+36. Color Desc
+37. Size Code NRF
+38. Size Desc
+39. Manufacturer
+40. OEM
+41. Product Year
+42. Condition
+43. Prepack #
+44. Remark
+45. Harmonized #
+46. UOM
+47. Net Weight
+48. Gross Weight
+49. Product Height
+50. Product Length
+51. Product Width
+52. Box Height
+53. Box Length
+54. Box Width
+55. Qty/Case
+56. Qty/Box
+57. Material Content
+58. Tags
+59. Care Instructions
+60. Ship From
+61. Ship To
+62. Ship Carrier
+63. Shipping Description
+64. Return Policy
+65. Security Privacy
+66. Dropship Description
+67. Title
+68. Short Description
+69. Long Description
+70. Dropship Listing Title
+71. Dropship Short Description
+72. Dropship Long Description
+73. Keywords
+74. Google Product Category
+75. Google Product Type
+76. Facebook Product Category
+77. Color Map
+78. Key Features 1
+79. Key Features 2
+80. Key Features 3
+81. Key Features 4
+82. Key Features 5
+83. Main Image
+84. Front Image
+85. Back Image
+86. Side Image
+87. Detail Image
+88. Full Image
+89. Thumbnail Image
+90. Size Chart Image
+91. Swatch Image
+92. Additional Image 1
+93. Additional Image 2
+94. Additional Image 3
+95. Main Video
+96. Additional Video 1
+97. Material 1 Name
+98. Material 1 Percentage
+99. Material 2 Name
+100. Material 2 Percentage
+101. Material 3 Name
+102. Material 3 Percentage
+103. Material 4 Name
+104. Material 4 Percentage
+105. Material 5 Name
+106. Material 5 Percentage
+107. Additional Color 1
+108. Additional Color 2
