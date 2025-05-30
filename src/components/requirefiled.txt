@@ -1,2 +1,18 @@
 Vendor SKU, Product Name, Dropship Price, Allow Dropship Return, Condition, UOM, Ship From, Ship To, Ship Carrier, Title, Short Description, Keywords, Key Features 1, Key Features 2, Main Image, Full Image, Thumbnail Image
+1.	Vendor SKU
+2.	UPC
+3.	Product EN Name
+4.	Product CN Name
+5.	Dropship price
+6.	Brand
+7.	Net Weight
+8.	Gross Weight
+9.	Product Height
+10.	Product length
+11.	Product Width
+12.	Box Height
+13.	Box Length
+14.	Box Width
+15.	Main Image
+
 

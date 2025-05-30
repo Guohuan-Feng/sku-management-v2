@@ -159,7 +159,7 @@ const App = () => {
   const defaultDisplayFields = [
     'vendor_sku',
     'UPC',
-    'product_name',
+    'product_en_name',
     'product_cn_name',
     'dropship_price',
     'brand',
@@ -181,7 +181,7 @@ const App = () => {
 
   const getTableColumns = () => {
     const orderedDisplayFields = [
-      'vendor_sku', 'UPC', 'product_name', 'product_cn_name', 'dropship_price', 'brand',
+      'vendor_sku', 'UPC', 'product_en_name', 'product_cn_name', 'dropship_price', 'brand',
       'net_weight', 'gross_weight', 'product_height', 'product_length', 'product_width',
       'box_height', 'box_length', 'box_width', 'main_image', 'size_chart_image',
       'allow_dropship_return', 'condition', 'UOM', 'ship_from', 'ship_to', 'ship_carrier',
@@ -384,9 +384,58 @@ const App = () => {
     setEditingRowData(newEditingRowData);
   };
 
-  const handleModalSubmit = async (values) => { /* ... (unchanged) ... */ return true; };
+  // 模态框提交处理函数 (修改点：新增 initialDataParam 参数)
+  const handleModalSubmit = async (values, initialDataParam) => {
+    setLoading(true);
+    setFormApiFieldErrors([]);
+    console.log('handleModalSubmit: Received values:', values); // 新增日志
+    console.log('handleModalSubmit: Received initialDataParam:', initialDataParam); // 新增日志
+    console.log('handleModalSubmit: Type of values.id:', typeof values.id, 'Value of values.id:', values.id); // 新增日志
+
+    try {
+      let success = false;
+      if (initialDataParam) { // 根据 initialDataParam 是否存在判断是更新还是创建
+        // 修改点：使用 initialDataParam.id 来获取 SKU ID
+        await updateSku(initialDataParam.id, values); // 确保 values.id 包含了正确的 SKU ID
+        message.success('SKU updated successfully!');
+        success = true;
+      } else {
+        const { id: _, ...payload } = values; // 创建新 SKU 时移除临时 id
+        await createSku(payload);
+        message.success('SKU created successfully!');
+        success = true;
+      }
+      if (success) {
+        fetchSkusWithHandling(); // 重新获取数据
+
+        // 根据 initialDataParam 的来源关闭正确的模态框
+        if (initialDataParam === editingSku) { // 如果是编辑操作的模态框
+            handleModalClose();
+        } else if (initialDataParam === viewingSku) { // 如果是查看所有字段的模态框
+            handleViewAllModalClose();
+        } else { // 否则认为是创建操作的模态框
+            handleModalClose();
+        }
+      }
+      return success;
+    } catch (error) {
+      console.error('Modal submission failed:', error);
+      if (error.fieldErrors) {
+        setFormApiFieldErrors(error.fieldErrors);
+        const apiErrorsMsg = error.fieldErrors.map(e => `${e.loc[e.loc.length - 1]}: ${e.msg}`).join('; ');
+        message.error(`API Error: ${apiErrorsMsg}`);
+      } else {
+        message.error(`Failed to save SKU: ${error.message || 'Unknown error'}`);
+      }
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
   const handleModalClose = () => { setIsModalOpen(false); setEditingSku(null); setFormApiFieldErrors([]); };
-  const handleViewAllModalClose = () => { setIsViewAllModalOpen(false); setViewingSku(null); };
+  const handleViewAllModalClose = () => { setIsViewAllModalOpen(false); setViewingSku(null); setFormApiFieldErrors([]); }; // 清空错误信息
   const handleExport = () => { /* ... (unchanged) ... */ };
   const handleCsvUpload = async (options) => { /* ... (unchanged) ... */ };
 
@@ -462,26 +511,29 @@ const App = () => {
                 Add New SKU (Inline)
             </Button>
         </div>
-        {/* 用于创建/编辑 SKU 的模态框 */}
+        {/* 用于创建/编辑 SKU 的模态框，现在也使用 showAllMode 布局 */}
         <SkuFormModal
           visible={isModalOpen}
           onClose={handleModalClose}
-          onSubmit={handleModalSubmit}
+          onSubmit={(values) => handleModalSubmit(values, editingSku)} // 修改点：传递 editingSku
           initialData={editingSku}
           fieldsConfig={fieldsConfig}
           statusOptions={statusOptions}
           conditionOptions={conditionOptions}
           apiFieldErrors={formApiFieldErrors}
+          showAllMode={true} // 设置为 showAllMode，以便统一布局
         />
-        {/* 新增的用于显示所有字段的模态框，设置为只读模式 */}
+        {/* 用于显示所有字段的模态框，现在支持编辑 */}
         <SkuFormModal
           visible={isViewAllModalOpen}
           onClose={handleViewAllModalClose}
+          onSubmit={(values) => handleModalSubmit(values, viewingSku)} // 修改点：传递 viewingSku
           initialData={viewingSku}
           fieldsConfig={fieldsConfig}
           statusOptions={statusOptions}
           conditionOptions={conditionOptions}
-          isReadOnly={true}
+          apiFieldErrors={formApiFieldErrors}
+          showAllMode={true} // 设置为 showAllMode
         />
       </div>
     </ConfigProvider>

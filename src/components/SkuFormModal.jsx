@@ -1,3 +1,4 @@
+// src/components/SkuFormModal.jsx
 import { Modal, Form, Input, Select, InputNumber, Button, Row, Col, Checkbox, message } from 'antd';
 import { useEffect, useState } from 'react';
 import { generateAIDescription } from '../services/skuApiService';
@@ -8,7 +9,7 @@ const { TextArea } = Input;
 
 // AI generated description will use values from these form fields as input
 const AI_INPUT_FIELDS = [
-  'product_name', 'brand', 'category', 'sub_category', 'color', 'size',
+  'product_en_name', 'brand', 'category', 'sub_category', 'color', 'size',
   'product_class', 'group', 'sub_group', 'style', 'sub_style', 'model',
   'gender', 'keywords'
 ];
@@ -16,12 +17,13 @@ const AI_INPUT_FIELDS = [
 const SkuFormModal = ({
   visible,
   onClose,
-  onSubmit,
+  onSubmit, // 确保 onSubmit 传递进来
   initialData,
   fieldsConfig,
   statusOptions,
   conditionOptions,
   apiFieldErrors,
+  showAllMode = false, // 新增 showAllMode 属性，默认为 false
 }) => {
   const [form] = Form.useForm();
   const [aiLoading, setAiLoading] = useState(false);
@@ -100,6 +102,7 @@ const SkuFormModal = ({
           }
         });
 
+        // 无论何种模式，都调用 onSubmit
         const success = await onSubmit(submissionValues);
         if (success) {
           form.resetFields();
@@ -163,11 +166,7 @@ const SkuFormModal = ({
   };
 
   const renderField = (field) => {
-    const rules = [];
-    if (field.validation) {
-      // Validation rules are now handled by Ant Design's Form.Item `rules` prop based on `field.validation`
-    }
-
+    // 移除 disabled 属性的 isReadOnly 判断，因为 showAllMode 允许编辑
     switch (field.type) {
       case 'text':
         return <Input placeholder={field.example || field.description} disabled={field.name === 'id'} />;
@@ -202,16 +201,29 @@ const SkuFormModal = ({
     }
   };
 
+  // 分离必填字段和非必填字段
+  const requiredFields = fieldsConfig.filter(field => field.isMandatory && field.name !== 'id');
+  const otherFields = fieldsConfig.filter(field => !field.isMandatory && field.name !== 'id');
+
   return (
     <Modal
-      title={initialData ? 'Edit SKU' : 'Create SKU'}
+      title={showAllMode ? 'View/Edit All SKU Fields' : (initialData ? 'Edit SKU' : 'Create SKU')}
       open={visible}
-      onOk={handleOk}
+      onOk={handleOk} // 无论何种模式，点击 OK 都触发提交
       onCancel={onClose}
       width="80vw"
       destroyOnClose
       maskClosable={false}
-      footer={[ // Removed AI generation button from footer
+      footer={[
+          <Button
+            key="aiGenerate"
+            onClick={handleAIGenerate}
+            loading={aiLoading}
+            // AI 生成按钮只在编辑/创建模式下显示，并且 long_desc 字段存在
+            style={{ display: showAllMode || (fieldsConfig.some(f => f.name === 'long_desc')) ? 'inline-block' : 'none' }}
+          >
+            ✨ Use AI description
+          </Button>,
           <Button key="back" onClick={onClose}>
             Cancel
           </Button>,
@@ -221,50 +233,94 @@ const SkuFormModal = ({
         ]}
     >
       <Form form={form} layout="vertical" name="skuForm">
-        <Row gutter={16}>
-          {fieldsConfig.map((field) => {
-            if (field.name === 'id') return null;
-            return (
-              // Use React.Fragment to wrap Col and potentially AI button container
-              <React.Fragment key={field.name}>
-                <Col span={field.gridWidth || 8}>
+        {/* 必填字段区域，只在 showAllMode 下显示 */}
+        {showAllMode && requiredFields.length > 0 && (
+          <div style={{ marginBottom: '24px', border: '1px solid #d9d9d9', padding: '16px', borderRadius: '8px' }}>
+            <h3 style={{ marginTop: 0, color: '#1890ff' }}>Required Fields (Mandatory)</h3>
+            <Row gutter={16}>
+              {requiredFields.map((field) => (
+                <Col span={field.gridWidth || 8} key={field.name}>
                   <Form.Item
                     name={field.name}
                     label={field.label}
                     rules={field.validation ?
-                        Object.entries(field.validation).reduce((acc, [key, value]) => {
-                            if (key === 'required' && value) {
-                                acc.push({ required: true, message: field.validation.requiredMsg || `${field.label} is required!` });
-                            } else if (key === 'pattern' && value) {
-                                acc.push({ pattern: value, message: field.validation.patternMsg || 'Invalid format!' });
-                            } else if (key === 'maxLength' && value) {
-                                acc.push({ max: value, message: field.validation.maxLengthMsg || `Max ${value} characters!` });
-                            } else if (key === 'min' && value !== undefined && (field.type === 'number' || field.isFee)) {
-                                acc.push({ type: 'number', min: value, message: field.validation.minMsg || `Cannot be less than ${value}!` });
-                            } else if (key === 'max' && value !== undefined && (field.type === 'number' || field.isFee)) {
-                                acc.push({ type: 'number', max: value, message: field.validation.maxMsg || `Cannot be greater than ${value}!` });
-                            }
-                            return acc;
-                        }, [])
-                        : []
+                      Object.entries(field.validation).reduce((acc, [key, value]) => {
+                          if (key === 'required' && value) {
+                              acc.push({ required: true, message: field.validation.requiredMsg || `${field.label} is required!` });
+                          } else if (key === 'pattern' && value) {
+                              acc.push({ pattern: value, message: field.validation.patternMsg || 'Invalid format!' });
+                          } else if (key === 'maxLength' && value) {
+                              acc.push({ max: value, message: field.validation.maxLengthMsg || `Max ${value} characters!` });
+                          } else if (key === 'min' && value !== undefined && (field.type === 'number' || field.isFee)) {
+                              acc.push({ type: 'number', min: value, message: field.validation.minMsg || `Cannot be less than ${value}!` });
+                          } else if (key === 'max' && value !== undefined && (field.type === 'number' || field.isFee)) {
+                              acc.push({ type: 'number', max: value, message: field.validation.maxMsg || `Cannot be greater than ${value}!` });
+                          }
+                          return acc;
+                      }, [])
+                      : []
                     }
                     required={field.validation?.required}
                   >
                     {renderField(field)}
                   </Form.Item>
                 </Col>
-                {/* Add AI generation button below long_desc field (logically) */}
-                {field.name === 'long_desc' && (
-                  <Col span={24} style={{ textAlign: 'right', marginTop: '0px', marginBottom: '16px' }}>
-                    <Button onClick={handleAIGenerate} loading={aiLoading}>
-                      ✨ Use AI description
-                    </Button>
-                  </Col>
-                )}
-              </React.Fragment>
-            );
-          })}
-        </Row>
+              ))}
+            </Row>
+          </div>
+        )}
+
+        {/* 其他字段区域 */}
+        <div style={showAllMode ? { border: '1px solid #d9d9d9', padding: '16px', borderRadius: '8px' } : {}}>
+            {showAllMode && <h3 style={{ marginTop: 0, color: '#1890ff' }}>Other Fields</h3>}
+            <Row gutter={16}>
+              {/* 在 showAllMode 下，显示所有字段；在常规编辑/创建模式下，显示非必填字段 */}
+              {(showAllMode ? fieldsConfig : otherFields).map((field) => {
+                if (field.name === 'id') return null; // ID 字段不显示
+                // 如果是 showAllMode 并且是必填字段，则不在“其他字段”区域重复显示
+                if (showAllMode && field.isMandatory) return null;
+
+                return (
+                  <React.Fragment key={field.name}>
+                    <Col span={field.gridWidth || 8}>
+                      <Form.Item
+                        name={field.name}
+                        label={field.label}
+                        rules={field.validation ?
+                            Object.entries(field.validation).reduce((acc, [key, value]) => {
+                                if (key === 'required' && value) {
+                                    acc.push({ required: true, message: field.validation.requiredMsg || `${field.label} is required!` });
+                                } else if (key === 'pattern' && value) {
+                                    acc.push({ pattern: value, message: field.validation.patternMsg || 'Invalid format!' });
+                                } else if (key === 'maxLength' && value) {
+                                    acc.push({ max: value, message: field.validation.maxLengthMsg || `Max ${value} characters!` });
+                                } else if (key === 'min' && value !== undefined && (field.type === 'number' || field.isFee)) {
+                                    acc.push({ type: 'number', min: value, message: field.validation.minMsg || `Cannot be less than ${value}!` });
+                                } else if (key === 'max' && value !== undefined && (field.type === 'number' || field.isFee)) {
+                                    acc.push({ type: 'number', max: value, message: field.validation.maxMsg || `Cannot be greater than ${value}!` });
+                                }
+                                return acc;
+                            }, [])
+                            : []
+                        }
+                        required={field.validation?.required}
+                      >
+                        {renderField(field)}
+                      </Form.Item>
+                    </Col>
+                    {/* 在 showAllMode 下，AI 生成按钮在 long_desc 字段下方显示 */}
+                    {field.name === 'long_desc' && (
+                        <Col span={24} style={{ textAlign: 'right', marginTop: '0px', marginBottom: '16px' }}>
+                            <Button onClick={handleAIGenerate} loading={aiLoading}>
+                                ✨ Use AI description
+                            </Button>
+                        </Col>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </Row>
+        </div>
       </Form>
     </Modal>
   );

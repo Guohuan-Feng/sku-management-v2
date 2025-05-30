@@ -38,7 +38,7 @@ export const harmonizedCodePattern = /^[0-9A-Za-z.\-]+$/; // Keep this one stric
 const mandatoryFieldsFromCSV = [
   'vendor_sku',
   'UPC', // 新增必填
-  'product_name', // 原有 Product EN Name
+  'product_en_name', // 原有 Product EN Name
   'product_cn_name', // 新增必填
   'dropship_price',
   'brand', // 新增必填
@@ -101,7 +101,7 @@ const tempFieldsConfig = [
     description: 'Universal Product Code (12-digit number).', example: '123456789012'
   },
   {
-    name: 'product_name', label: 'Product EN Name', type: 'text', gridWidth: 8, // Label changed to EN Name
+    name: 'product_en_name', label: 'Product EN Name', type: 'text', gridWidth: 8, // Label changed to EN Name
     origValidation: { required: true, maxLength: 100, pattern: generalTextAndSpecialCharsPatternNotEmpty, patternMsg: 'Product EN name allows English, Chinese, numbers, spaces, and common special characters. Max 100 characters.' },
     description: 'Full product name in English.', example: 'Example Product Name'
   },
