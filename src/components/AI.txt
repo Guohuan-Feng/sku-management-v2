@@ -1,0 +1,14 @@
+product_name: "无线降噪耳机" (Wireless Noise-Cancelling Headphones)
+brand: "声海 (Sennheiser)"
+category: "音频设备 (Audio Equipment)"
+sub_category: "耳机 (Headphones)"
+color: "黑色 (Black)"
+size: "均码 (One Size)"
+product_class: "消费电子 (Consumer Electronics)"
+group: "个人音频 (Personal Audio)"
+sub_group: "头戴式耳机 (Over-Ear Headphones)"
+style: "现代简约 (Modern Minimalist)"
+sub_style: "旅行款 (Travel Edition)"
+model: "Momentum 4"
+gender: "男女通用 (Unisex)"
+keywords: "降噪, 无线, 蓝牙, 高保真, 旅行耳机, Sennheiser Momentum" (Noise-Cancelling, Wireless, Bluetooth, Hi-Fi, Travel Headphones, Sennheiser Momentum)
