@@ -1,36 +1,36 @@
 // src/App.jsx
-// 请确保以下 import 语句已存在于文件顶部
 import { useState, useEffect, useRef } from 'react';
 import './App.css';
 import { Table, ConfigProvider, Button, message, Upload, Space, Popconfirm, Alert, Form } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
-import * as XLSX from 'xlsx'; // 用于 Excel 导出
-import { fieldsConfig, statusOptions, conditionOptions } from './components/fieldConfig'; // 确保路径正确
+import * as XLSX from 'xlsx';
+import { fieldsConfig, statusOptions, conditionOptions } from './components/fieldConfig';
 import { UploadOutlined, EditOutlined, DeleteOutlined, PlusOutlined, ExportOutlined, SaveOutlined, CloseOutlined, EyeOutlined } from '@ant-design/icons';
-import SkuFormModal from './components/SkuFormModal'; // 确保路径正确
-import EditableCell from './components/EditableCell'; // 确保路径正确
-import { getAllSkus, createSku, updateSku, deleteSku, uploadSkuCsv } from './services/skuApiService'; // 确保路径正确
+import SkuFormModal from './components/SkuFormModal';
+import EditableCell from './components/EditableCell';
+import { getAllSkus, createSku, updateSku, deleteSku, uploadSkuCsv } from './services/skuApiService';
 
 const App = () => {
-  // ... (文件顶部的其他 state 和 useEffect hooks 保持不变)
   const [form] = Form.useForm();
   const [dataSource, setDataSource] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingSku, setEditingSku] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false); 
+  const [editingSku, setEditingSku] = useState(null); 
   const fileInputRef = useRef(null);
   const [errorMessages, setErrorMessages] = useState([]);
   const [formApiFieldErrors, setFormApiFieldErrors] = useState([]);
+
   const [editingKey, setEditingKey] = useState('');
-  const [editingRowData, setEditingRowData] = useState({});
+  const [editingRowData, setEditingRowData] = useState({}); 
+
   const [isViewAllModalOpen, setIsViewAllModalOpen] = useState(false);
   const [viewingSku, setViewingSku] = useState(null);
 
   const handleInlineFormValuesChange = (changedValues, allValues) => {
     setEditingRowData(prev => ({ ...prev, ...changedValues }));
   };
-
+  
   const fetchSkusWithHandling = async () => {
     setLoading(true);
     setErrorMessages([]);
@@ -57,8 +57,9 @@ const App = () => {
   const edit = (record) => {
     if (editingKey && editingKey !== record.key) {
       message.warning('Please save or cancel the current editing row before editing another!');
-      return;
+      return; 
     }
+
     const initialValues = { ...record };
     fieldsConfig.forEach(field => {
       if (field.type === 'select') {
@@ -72,14 +73,15 @@ const App = () => {
         initialValues[field.name] = String(initialValues[field.name]);
       }
     });
+
     form.setFieldsValue(initialValues);
-    setEditingRowData(initialValues);
+    setEditingRowData(initialValues); 
     setEditingKey(record.key);
   };
 
   const cancel = () => {
     setEditingKey('');
-    setEditingRowData({});
+    setEditingRowData({}); 
     setFormApiFieldErrors([]);
   };
 
@@ -87,9 +89,12 @@ const App = () => {
     setLoading(true);
     setErrorMessages([]);
     setFormApiFieldErrors([]);
+
     try {
       const validatedFields = await form.validateFields();
+
       const updatedItem = { ...editingRowData, ...validatedFields };
+
       fieldsConfig.forEach(field => {
           if (field.type === 'number' && updatedItem[field.name] !== undefined && updatedItem[field.name] !== null) {
               const parsedValue = parseFloat(updatedItem[field.name]);
@@ -109,14 +114,17 @@ const App = () => {
               updatedItem[field.name] = updatedItem[field.name] === 'True' || updatedItem[field.name] === true;
           }
       });
-      const { key: _, ...apiPayload } = updatedItem;
-      if (String(key).startsWith('new-temp-id')) {
+
+      const { key: _, ...apiPayload } = updatedItem; 
+
+      if (String(key).startsWith('new-temp-id')) { 
         await createSku(apiPayload);
         message.success('SKU created successfully!');
-      } else {
-        await updateSku(apiPayload.id, apiPayload);
+      } else { 
+        await updateSku(apiPayload.id, apiPayload); 
         message.success('SKU updated successfully!');
       }
+
       fetchSkusWithHandling();
       setEditingKey('');
       setEditingRowData({});
@@ -138,21 +146,24 @@ const App = () => {
 
   const getTableColumns = () => {
     const orderedDisplayFields = [
-      'vendor_sku', 'UPC', 'product_en_name', /* 'product_cn_name' is intentionally omitted for display based on export requirements but can be added if needed for UI */
+      'vendor_sku', 'UPC', 'product_en_name', 
       'dropship_price', 'brand',
       'net_weight', 'gross_weight', 'product_height', 'product_length', 'product_width',
       'box_height', 'box_length', 'box_width', 'main_image', 'size_chart_image',
       'allow_dropship_return', 'condition', 'UOM', 'ship_from', 'ship_to', 'ship_carrier',
       'title', 'short_desc', 'keywords', 'key_features_1', 'key_features_2',
-      'full_image', 'thumbnail_image',
+      'full_image', 'thumbnail_image', 
       'status'
     ];
+
     const columnsToDisplay = orderedDisplayFields
       .map(fieldName => fieldsConfig.find(field => field.name === fieldName))
       .filter(Boolean);
+
     const generatedColumns = columnsToDisplay
       .map((field) => {
         if (field.name === 'id') return null;
+
         return {
           title: field.label,
           dataIndex: field.name,
@@ -174,6 +185,7 @@ const App = () => {
           }),
         };
       }).filter(Boolean);
+
     generatedColumns.push({
       title: 'Operation',
       dataIndex: 'operation',
@@ -182,6 +194,7 @@ const App = () => {
       width: 180,
       render: (_, record) => {
         const editable = isEditing(record);
+
         return editable ? (
           <Space size="small">
             <Button type="link" icon={<SaveOutlined />} onClick={() => save(record.key)} loading={loading}>
@@ -218,6 +231,7 @@ const App = () => {
         );
       },
     });
+
     return generatedColumns;
   };
 
@@ -235,14 +249,15 @@ const App = () => {
       message.warning('Please save or cancel the current editing row first!');
       return;
     }
+
     const newSku = {
-      key: `new-temp-id-${Date.now()}`,
-      id: 'new-temp-id', // Temporary ID for new rows not yet saved to backend
+      key: `new-temp-id-${Date.now()}`, 
+      id: 'new-temp-id', 
       ...fieldsConfig.reduce((acc, field) => {
         if (field.defaultValue !== undefined) {
           acc[field.name] = field.defaultValue;
         } else if (field.type === 'number') {
-            acc[field.name] = null;
+            acc[field.name] = null; 
         } else if (field.type === 'select') {
             let selectDefault = null;
             if (field.defaultValue !== undefined) {
@@ -254,8 +269,8 @@ const App = () => {
         } else if (field.type === 'url') {
             acc[field.name] = null;
         } else {
-            if (field.isMandatory) { // Based on your updated fieldConfig logic
-                acc[field.name] = '';
+            if (field.isMandatory) {
+                acc[field.name] = ''; 
             } else {
                 acc[field.name] = null;
             }
@@ -263,32 +278,31 @@ const App = () => {
         return acc;
       }, {})
     };
+
     setDataSource([...dataSource, newSku]);
-    edit(newSku); // Make the new row editable
+    edit(newSku); 
   };
 
   const handleDelete = async (skuIdToDelete) => {
     setLoading(true);
     setErrorMessages([]);
     try {
-      // If it's a new temporary row that hasn't been saved
       if (editingKey === skuIdToDelete && String(skuIdToDelete).startsWith('new-temp-id')) {
         setDataSource(dataSource.filter(item => item.key !== skuIdToDelete));
-        setEditingKey(''); // Clear editing state
+        setEditingKey(''); 
         setEditingRowData({});
         message.success('New SKU discarded!');
-      } else { // Existing SKU from backend
+      } else { 
         const skuToDelete = dataSource.find(item => item.key === skuIdToDelete);
         if (!skuToDelete || String(skuToDelete.id).startsWith('new-temp-id')) {
             message.error('Cannot delete. SKU ID not found or is a temporary ID.');
             setLoading(false);
             return;
         }
-        await deleteSku(skuToDelete.id); // Use actual ID for deletion
+        await deleteSku(skuToDelete.id); 
         message.success('SKU deleted successfully!');
-        fetchSkusWithHandling(); // Refresh data
+        fetchSkusWithHandling(); 
       }
-      // Update selectedRowKeys if the deleted key was selected
       setSelectedRowKeys(prevKeys => prevKeys.filter(k => k !== skuIdToDelete));
     } catch (error) {
       console.error('Failed to delete SKU:', error);
@@ -308,7 +322,7 @@ const App = () => {
     setErrorMessages([]);
     let successCount = 0;
     const currentErrors = [];
-    const remainingSelectedKeys = [...selectedRowKeys]; // To keep track of keys that couldn't be deleted
+    const remainingSelectedKeys = [...selectedRowKeys]; 
 
     for (const skuKey of selectedRowKeys) {
       try {
@@ -318,8 +332,7 @@ const App = () => {
             setEditingKey('');
             setEditingRowData({});
           }
-          // No API call for unsaved new rows
-          successCount++; // Consider it a "successful deletion" from UI perspective
+          successCount++; 
           remainingSelectedKeys.splice(remainingSelectedKeys.indexOf(skuKey), 1);
         } else {
           const skuToDelete = dataSource.find(item => item.key === skuKey);
@@ -328,7 +341,6 @@ const App = () => {
             successCount++;
             remainingSelectedKeys.splice(remainingSelectedKeys.indexOf(skuKey), 1);
           } else {
-            // This case should ideally not happen if row selection is managed correctly
              currentErrors.push(`SKU with key ${skuKey} not found or is an unsaved new item.`);
           }
         }
@@ -343,30 +355,26 @@ const App = () => {
       message.success(`Successfully deleted ${successCount} SKUs!`);
     }
     if (currentErrors.length > 0) {
-      setErrorMessages(prev => [...prev, ...currentErrors]); // Append new errors
+      setErrorMessages(prev => [...prev, ...currentErrors]); 
       message.error(`There were ${currentErrors.length} SKUs that failed to delete or were already removed. Please check prompts.`);
     }
     if (successCount > 0 || selectedRowKeys.some(key => String(key).startsWith('new-temp-id'))) {
-         fetchSkusWithHandling(); // Refresh if any API deletion occurred or temp rows were removed
+         fetchSkusWithHandling(); 
     }
-    setSelectedRowKeys(remainingSelectedKeys); // Update selected keys to those that failed
+    setSelectedRowKeys(remainingSelectedKeys); 
   };
-
 
   const handleModalSubmit = async (values, initialDataParam) => {
     setLoading(true);
     setFormApiFieldErrors([]);
     try {
       let success = false;
-      const submissionValues = { ...values }; // Use a copy
+      const submissionValues = { ...values }; 
 
-       // Ensure ID from initialDataParam is used for updates
       if (initialDataParam && initialDataParam.id) {
         submissionValues.id = initialDataParam.id;
       }
 
-
-      // Perform type conversions based on fieldsConfig
       fieldsConfig.forEach(field => {
         if (field.type === 'number' && submissionValues[field.name] !== undefined && submissionValues[field.name] !== null) {
           const parsedValue = parseFloat(submissionValues[field.name]);
@@ -387,13 +395,12 @@ const App = () => {
         }
       });
 
-
-      if (initialDataParam && initialDataParam.id && !String(initialDataParam.id).startsWith('new-temp-id')) { // Check if it's an existing SKU
+      if (initialDataParam && initialDataParam.id && !String(initialDataParam.id).startsWith('new-temp-id')) { 
         await updateSku(initialDataParam.id, submissionValues);
         message.success('SKU updated successfully!');
         success = true;
-      } else { // New SKU creation
-        const { id: tempId, ...payload } = submissionValues; // Remove temporary 'id' if present
+      } else { 
+        const { id: tempId, ...payload } = submissionValues; 
         await createSku(payload);
         message.success('SKU created successfully!');
         success = true;
@@ -401,11 +408,11 @@ const App = () => {
 
       if (success) {
         fetchSkusWithHandling();
-        if (initialDataParam === editingSku) {
+        if (initialDataParam === editingSku) { 
             handleModalClose();
-        } else if (initialDataParam === viewingSku) {
+        } else if (initialDataParam === viewingSku) { 
             handleViewAllModalClose();
-        } else {
+        } else { 
             handleModalClose();
         }
       }
@@ -426,8 +433,8 @@ const App = () => {
   };
 
   const handleModalClose = () => { setIsModalOpen(false); setEditingSku(null); setFormApiFieldErrors([]); };
-  const handleViewAllModalClose = () => { setIsViewAllModalOpen(false); setViewingSku(null); setFormApiFieldErrors([]); };
-
+  const handleViewAllModalClose = () => { setIsViewAllModalOpen(false); setViewingSku(null); setFormApiFieldErrors([]); }; 
+  
   const handleExport = () => {
     const exportFieldsOrder = [
       { header: 'Vendor SKU', dataKey: 'vendor_sku' },
@@ -552,7 +559,7 @@ const App = () => {
     const getLabel = (options, value) => {
       const stringValue = value !== undefined && value !== null ? String(value) : undefined;
       const option = options.find(opt => opt.value === stringValue);
-      return option ? option.label : stringValue;
+      return option ? option.label : stringValue; 
     };
 
     const sheetData = dataToExport.map(sku => {
@@ -563,16 +570,16 @@ const App = () => {
         } else if (field.type === 'condition') {
           value = getLabel(conditionOptions, value);
         } else if (field.type === 'booleanToLabel') {
-          const valStr = String(sku[field.dataKey]).toLowerCase();
+          const valStr = String(sku[field.dataKey]).toLowerCase(); 
           if (valStr === 'true') {
               value = 'Yes';
           } else if (valStr === 'false') {
               value = 'No';
-          } else { // Fallback for unexpected values, or if it's already 'Yes'/'No'
-              value = sku[field.dataKey];
+          } else { 
+              value = sku[field.dataKey]; 
           }
         }
-        return value !== undefined && value !== null ? value : '';
+        return value !== undefined && value !== null ? value : ''; 
       });
     });
 
@@ -580,27 +587,26 @@ const App = () => {
     const worksheet = XLSX.utils.aoa_to_sheet([headers, ...sheetData]);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'SKUs');
-
+    
     const now = new Date();
     const timestamp = `${now.getFullYear().toString().slice(-2)}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}${now.getSeconds().toString().padStart(2, '0')}`;
     XLSX.writeFile(workbook, `skus_${timestamp}.xlsx`);
     message.success('SKU data exported successfully!');
   };
-
+  
   const handleCsvUpload = async (options) => {
     const { file, onSuccess, onError } = options;
     setLoading(true);
     setErrorMessages([]);
     try {
       const response = await uploadSkuCsv(file);
-      onSuccess(response, file); // Pass response and file to onSuccess
+      onSuccess(response, file); 
       message.success(`${file.name} uploaded and processed successfully!`);
-      fetchSkusWithHandling(); // Refresh data after upload
+      fetchSkusWithHandling(); 
     } catch (error) {
       console.error("CSV Upload failed:", error);
       let errorMessage = `Failed to upload ${file.name}: `;
       if (error.fieldErrors && Array.isArray(error.fieldErrors)) {
-        // If fieldErrors are available (e.g., from FastAPI 422 response)
         const detailedErrors = error.fieldErrors.map(fe => {
           const fieldName = fe.loc && fe.loc.length > 1 ? fe.loc[fe.loc.length -1] : 'Unknown field';
           return `${fieldName}: ${fe.msg}`;
@@ -608,24 +614,22 @@ const App = () => {
         errorMessage += `Validation errors: ${detailedErrors}`;
          setErrorMessages(prev => [...prev, `Validation errors in ${file.name}: ${detailedErrors}`]);
       } else if (error.message) {
-        // General error message
         errorMessage += error.message;
          setErrorMessages(prev => [...prev, `Upload error for ${file.name}: ${error.message}`]);
       } else {
         errorMessage += 'Unknown error during upload.';
         setErrorMessages(prev => [...prev, `Upload error for ${file.name}: Unknown error.`]);
       }
-      onError(error); // Pass error to onError
-      message.error(errorMessage, 10); // Display error message for longer
+      onError(error); 
+      message.error(errorMessage, 10); 
     } finally {
       setLoading(false);
       if (fileInputRef.current && fileInputRef.current.fileList) {
-        fileInputRef.current.fileList = []; // Clear file input
+        fileInputRef.current.fileList = []; 
       }
     }
   };
 
-  // ... (JSX rendant la partie UI de l'application)
   return (
     <ConfigProvider locale={zhCN}>
       <div className="App">
@@ -689,10 +693,10 @@ const App = () => {
             bordered
             rowKey="key"
             pagination={{
-                onChange: cancel, // Cancel editing when pagination changes
-                pageSizeOptions: ['10', '20', '50', '100', '200'],
+                onChange: cancel, 
+                pageSizeOptions: ['15', '20', '50', '100', '200'], // Added '15'
                 showSizeChanger: true,
-                defaultPageSize: 20,
+                defaultPageSize: 15, // Changed to 15
               }}
           />
         </Form>
@@ -704,24 +708,24 @@ const App = () => {
         <SkuFormModal
           visible={isModalOpen}
           onClose={handleModalClose}
-          onSubmit={(values) => handleModalSubmit(values, editingSku)}
+          onSubmit={(values) => handleModalSubmit(values, editingSku)} 
           initialData={editingSku}
           fieldsConfig={fieldsConfig}
           statusOptions={statusOptions}
           conditionOptions={conditionOptions}
           apiFieldErrors={formApiFieldErrors}
-          showAllMode={true}
+          showAllMode={true} 
         />
         <SkuFormModal
           visible={isViewAllModalOpen}
           onClose={handleViewAllModalClose}
-          onSubmit={(values) => handleModalSubmit(values, viewingSku)}
+          onSubmit={(values) => handleModalSubmit(values, viewingSku)} 
           initialData={viewingSku}
           fieldsConfig={fieldsConfig}
           statusOptions={statusOptions}
           conditionOptions={conditionOptions}
           apiFieldErrors={formApiFieldErrors}
-          showAllMode={true}
+          showAllMode={true} 
         />
       </div>
     </ConfigProvider>
