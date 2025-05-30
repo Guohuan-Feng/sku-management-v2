@@ -1,13 +1,12 @@
 // src/components/SkuFormModal.jsx
-import { Modal, Form, Input, Select, InputNumber, Button, Row, Col, Checkbox, message } from 'antd';
+import { Modal, Form, Input, Select, InputNumber, Button, Row, Col, message } from 'antd';
 import { useEffect, useState } from 'react';
 import { generateAIDescription } from '../services/skuApiService';
-import React from 'react'; // Ensure React is imported to use Fragment
+import React from 'react'; 
 
 const { Option } = Select;
 const { TextArea } = Input;
 
-// AI generated description will use values from these form fields as input
 const AI_INPUT_FIELDS = [
   'product_en_name', 'brand', 'category', 'sub_category', 'color', 'size',
   'product_class', 'group', 'sub_group', 'style', 'sub_style', 'model',
@@ -17,13 +16,13 @@ const AI_INPUT_FIELDS = [
 const SkuFormModal = ({
   visible,
   onClose,
-  onSubmit, // 确保 onSubmit 传递进来
+  onSubmit,
   initialData,
   fieldsConfig,
   statusOptions,
   conditionOptions,
   apiFieldErrors,
-  showAllMode = false, // 新增 showAllMode 属性，默认为 false
+  showAllMode = false,
 }) => {
   const [form] = Form.useForm();
   const [aiLoading, setAiLoading] = useState(false);
@@ -44,7 +43,6 @@ const SkuFormModal = ({
           }
           if (field.type === 'number' && formData[field.name] !== undefined && formData[field.name] !== null) {
             const numValue = parseFloat(formData[field.name]);
-            // Ensure number fields are parsed correctly, especially for fees
             formData[field.name] = isNaN(numValue) ? null : numValue;
           }
         });
@@ -83,12 +81,11 @@ const SkuFormModal = ({
         const submissionValues = { ...values };
         fieldsConfig.forEach(field => {
           if (field.type === 'number' && submissionValues[field.name] !== undefined && submissionValues[field.name] !== null) {
-            // Convert to float for number fields, potentially with 2 decimal places for fees
             const parsedValue = parseFloat(submissionValues[field.name]);
             if (!isNaN(parsedValue)) {
                 submissionValues[field.name] = field.isFee ? parseFloat(parsedValue.toFixed(2)) : parsedValue;
             } else {
-                submissionValues[field.name] = null; // Or undefined, depending on backend expectation for invalid numbers
+                submissionValues[field.name] = null; 
             }
           }
           if (field.name === 'status' && submissionValues[field.name] !== undefined) {
@@ -102,7 +99,6 @@ const SkuFormModal = ({
           }
         });
 
-        // 无论何种模式，都调用 onSubmit
         const success = await onSubmit(submissionValues);
         if (success) {
           form.resetFields();
@@ -130,8 +126,7 @@ const SkuFormModal = ({
 
       setAiLoading(true);
       const aiResponse = await generateAIDescription(payload);
-      console.log('AI Response from backend:', aiResponse); // View the complete AI response object
-
+      console.log('AI Response from backend:', aiResponse); 
 
       const fieldsToUpdate = {
         title: aiResponse['product title'],
@@ -145,14 +140,12 @@ const SkuFormModal = ({
       };
 
       const filteredFieldsToUpdate = {};
-
-
       for (const key in fieldsToUpdate) {
           if (fieldsToUpdate[key] !== undefined) {
               filteredFieldsToUpdate[key] = fieldsToUpdate[key];
           }
       }
-      console.log('Data being set to form:', filteredFieldsToUpdate); // View the final data to set to the form
+      console.log('Data being set to form:', filteredFieldsToUpdate); 
 
       form.setFieldsValue(filteredFieldsToUpdate);
       message.success('AI successfully generated description information!');
@@ -166,7 +159,6 @@ const SkuFormModal = ({
   };
 
   const renderField = (field) => {
-    // 移除 disabled 属性的 isReadOnly 判断，因为 showAllMode 允许编辑
     switch (field.type) {
       case 'text':
         return <Input placeholder={field.example || field.description} disabled={field.name === 'id'} />;
@@ -175,7 +167,7 @@ const SkuFormModal = ({
           style={{ width: '100%' }}
           placeholder={field.example || field.description}
           min={field.validation?.min}
-          precision={field.isFee ? 2 : 0} // Set precision for fee fields to 2, others to 0
+          precision={field.isFee ? 2 : 0} 
         />;
       case 'textarea':
         return <TextArea rows={field.rows || 2} placeholder={field.example || field.description} />;
@@ -201,29 +193,24 @@ const SkuFormModal = ({
     }
   };
 
-  // 分离必填字段和非必填字段
   const requiredFields = fieldsConfig.filter(field => field.isMandatory && field.name !== 'id');
   const otherFields = fieldsConfig.filter(field => !field.isMandatory && field.name !== 'id');
+
+  const canUseAI = fieldsConfig.some(
+    f => AI_INPUT_FIELDS.includes(f.name) || 
+         ['title', 'short_desc', 'long_desc', 'key_features_1', 'key_features_2', 'key_features_3', 'key_features_4', 'key_features_5'].includes(f.name)
+  );
 
   return (
     <Modal
       title={showAllMode ? 'View/Edit All SKU Fields' : (initialData ? 'Edit SKU' : 'Create SKU')}
       open={visible}
-      onOk={handleOk} // 无论何种模式，点击 OK 都触发提交
+      onOk={handleOk} 
       onCancel={onClose}
       width="80vw"
       destroyOnClose
       maskClosable={false}
       footer={[
-          <Button
-            key="aiGenerate"
-            onClick={handleAIGenerate}
-            loading={aiLoading}
-            // AI 生成按钮只在编辑/创建模式下显示，并且 long_desc 字段存在
-            style={{ display: showAllMode || (fieldsConfig.some(f => f.name === 'long_desc')) ? 'inline-block' : 'none' }}
-          >
-            ✨ Use AI description
-          </Button>,
           <Button key="back" onClick={onClose}>
             Cancel
           </Button>,
@@ -233,10 +220,25 @@ const SkuFormModal = ({
         ]}
     >
       <Form form={form} layout="vertical" name="skuForm">
-        {/* 必填字段区域，只在 showAllMode 下显示 */}
         {showAllMode && requiredFields.length > 0 && (
           <div style={{ marginBottom: '24px', border: '1px solid #d9d9d9', padding: '16px', borderRadius: '8px' }}>
-            <h3 style={{ marginTop: 0, color: '#1890ff' }}>Required Fields (Mandatory)</h3>
+            {/* Updated Row for title and AI button */}
+            <Row align="middle" style={{ marginBottom: '16px' }}>
+              <Col>
+                <h3 style={{ marginTop: 0, marginBottom: 0, color: '#1890ff' }}>Required Fields (Mandatory)</h3>
+              </Col>
+              {canUseAI && (
+                <Col style={{ marginLeft: '16px' }}> {/* Added marginLeft for spacing */}
+                  <Button
+                    key="aiGenerateRequired"
+                    onClick={handleAIGenerate}
+                    loading={aiLoading}
+                  >
+                    ✨ Use AI description
+                  </Button>
+                </Col>
+              )}
+            </Row>
             <Row gutter={16}>
               {requiredFields.map((field) => (
                 <Col span={field.gridWidth || 8} key={field.name}>
@@ -270,14 +272,11 @@ const SkuFormModal = ({
           </div>
         )}
 
-        {/* 其他字段区域 */}
         <div style={showAllMode ? { border: '1px solid #d9d9d9', padding: '16px', borderRadius: '8px' } : {}}>
             {showAllMode && <h3 style={{ marginTop: 0, color: '#1890ff' }}>Other Fields</h3>}
             <Row gutter={16}>
-              {/* 在 showAllMode 下，显示所有字段；在常规编辑/创建模式下，显示非必填字段 */}
               {(showAllMode ? fieldsConfig : otherFields).map((field) => {
-                if (field.name === 'id') return null; // ID 字段不显示
-                // 如果是 showAllMode 并且是必填字段，则不在“其他字段”区域重复显示
+                if (field.name === 'id') return null; 
                 if (showAllMode && field.isMandatory) return null;
 
                 return (
@@ -308,14 +307,6 @@ const SkuFormModal = ({
                         {renderField(field)}
                       </Form.Item>
                     </Col>
-                    {/* 在 showAllMode 下，AI 生成按钮在 long_desc 字段下方显示 */}
-                    {field.name === 'long_desc' && (
-                        <Col span={24} style={{ textAlign: 'right', marginTop: '0px', marginBottom: '16px' }}>
-                            <Button onClick={handleAIGenerate} loading={aiLoading}>
-                                ✨ Use AI description
-                            </Button>
-                        </Col>
-                    )}
                   </React.Fragment>
                 );
               })}
