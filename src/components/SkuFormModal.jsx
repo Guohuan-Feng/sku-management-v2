@@ -18,7 +18,7 @@ const SkuFormModal = ({
   onClose,
   onSubmit,
   initialData,
-  fieldsConfig,
+  fieldsConfig, // Crucial prop
   statusOptions,
   conditionOptions,
   apiFieldErrors,
@@ -28,6 +28,7 @@ const SkuFormModal = ({
   const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
+    // ... (useEffect hooks remain the same)
     if (visible) {
       if (initialData) {
         const formData = { ...initialData };
@@ -75,6 +76,7 @@ const SkuFormModal = ({
   }, [apiFieldErrors, form]);
 
   const handleOk = () => {
+    // ... (handleOk function remains the same)
     form
       .validateFields()
       .then(async (values) => {
@@ -110,55 +112,117 @@ const SkuFormModal = ({
   };
 
   const handleAIGenerate = async () => {
-    try {
-      const currentValues = form.getFieldsValue(AI_INPUT_FIELDS);
-      const payload = {};
-      for (const key in currentValues) {
-        if (currentValues[key] !== undefined && currentValues[key] !== null && String(currentValues[key]).trim() !== '') {
-          payload[key] = currentValues[key];
-        }
-      }
+    console.log('Debug: handleAIGenerate function started.'); // 1. Log entry
 
-      if (Object.keys(payload).length === 0) {
-        message.warning('Please enter some product information for AI to generate a description.');
-        return;
-      }
-
-      setAiLoading(true);
-      const aiResponse = await generateAIDescription(payload);
-      console.log('AI Response from backend:', aiResponse); 
-
-      const fieldsToUpdate = {
-        title: aiResponse['product title'],
-        short_desc: aiResponse['short description'],
-        long_desc: aiResponse['long description'],
-        key_features_1: aiResponse['key features 1'],
-        key_features_2: aiResponse['key features 2'],
-        key_features_3: aiResponse['key features 3'],
-        key_features_4: aiResponse['key features 4'],
-        key_features_5: aiResponse['key features 5'],
-      };
-
-      const filteredFieldsToUpdate = {};
-      for (const key in fieldsToUpdate) {
-          if (fieldsToUpdate[key] !== undefined) {
-              filteredFieldsToUpdate[key] = fieldsToUpdate[key];
-          }
-      }
-      console.log('Data being set to form:', filteredFieldsToUpdate); 
-
-      form.setFieldsValue(filteredFieldsToUpdate);
-      message.success('AI successfully generated description information!');
-
-    } catch (error) {
-      console.error('AI description generation failed:', error);
-      message.error(`AI description generation failed: ${error.message || 'Please try again later'}`);
-    } finally {
-      setAiLoading(false);
+    if (!fieldsConfig || !Array.isArray(fieldsConfig) || fieldsConfig.length === 0) {
+      console.error('Debug: fieldsConfig prop is missing, not an array, or empty. Cannot proceed.');
+      message.error('AI描述功能配置错误，请联系管理员。');
+      return;
     }
+    console.log('Debug: fieldsConfig is present with length:', fieldsConfig.length); // 2. Log fieldsConfig status
+    console.log('Debug: AI_INPUT_FIELDS:', AI_INPUT_FIELDS); // 2a. Log AI_INPUT_FIELDS
+
+    const currentFormValues = form.getFieldsValue(AI_INPUT_FIELDS);
+    console.log('Debug: currentFormValues from form:', currentFormValues); // 3. Log form values
+    
+    const fieldDetails = AI_INPUT_FIELDS.map(fieldName => {
+      const fieldConfigItem = fieldsConfig.find(f => f.name === fieldName);
+      if (!fieldConfigItem) {
+        console.warn(`Debug: No fieldConfig found for AI input field: ${fieldName}`);
+      }
+      const label = fieldConfigItem ? fieldConfigItem.label : fieldName;
+      const value = currentFormValues[fieldName];
+      const isFilled = value !== undefined && value !== null && String(value).trim() !== '';
+      return { name: fieldName, label, isFilled };
+    });
+    console.log('Debug: fieldDetails processed:', fieldDetails); // 4. Log processed field details
+
+    const filledFields = fieldDetails.filter(f => f.isFilled);
+    const missingFields = fieldDetails.filter(f => !f.isFilled);
+
+    let messageParts = [];
+    if (missingFields.length > 0) {
+      messageParts.push(`为了AI能更准确地生成描述，建议补充以下字段：\n- ${missingFields.map(f => f.label).join('\n- ')}`);
+    } else {
+      messageParts.push("所有推荐的AI输入字段均已填写。");
+    }
+
+    if (filledFields.length > 0) {
+      messageParts.push(`\n当前已填写的相关字段：\n- ${filledFields.map(f => f.label).join('\n- ')}`);
+    } else if (missingFields.length > 0) {
+      messageParts.push("\n当前未填写任何推荐的AI输入字段。");
+    }
+    
+    const confirmDialogContent = messageParts.join('\n');
+    console.log('Debug: Confirm dialog content to be displayed:', confirmDialogContent); // 5. Log dialog content
+
+    Modal.confirm({
+      title: '确认生成AI描述吗？',
+      content: <div style={{ whiteSpace: 'pre-line' }}>{confirmDialogContent + "\n\n是否继续生成？"}</div>,
+      okText: '生成',
+      cancelText: '取消',
+      maskClosable: true,
+      onOk: async () => {
+        console.log('Debug: Modal.confirm onOk triggered.'); // 6. Log onOk
+        const payload = {};
+        AI_INPUT_FIELDS.forEach(fieldName => {
+          const value = currentFormValues[fieldName];
+          if (value !== undefined && value !== null && String(value).trim() !== '') {
+            payload[fieldName] = String(value).trim();
+          }
+        });
+        console.log('Debug: Payload for AI API:', payload); // 6a. Log payload
+
+        if (Object.keys(payload).length === 0) {
+          console.log('Debug: Payload is empty, AI call will be skipped.'); // 6b. Log empty payload
+          message.warning('请输入一些有效的产品信息以供AI生成描述。');
+          return; 
+        }
+
+        try {
+          setAiLoading(true);
+          const aiResponse = await generateAIDescription(payload);
+          console.log('Debug: AI Response from backend:', aiResponse); // 6c. Log AI response
+
+          const fieldsToUpdate = {
+            title: aiResponse['product title'],
+            short_desc: aiResponse['short description'],
+            long_desc: aiResponse['long description'],
+            key_features_1: aiResponse['key features 1'],
+            key_features_2: aiResponse['key features 2'],
+            key_features_3: aiResponse['key features 3'],
+            key_features_4: aiResponse['key features 4'],
+            key_features_5: aiResponse['key features 5'],
+          };
+
+          const filteredFieldsToUpdate = {};
+          for (const key in fieldsToUpdate) {
+              if (fieldsToUpdate[key] !== undefined) {
+                  filteredFieldsToUpdate[key] = fieldsToUpdate[key];
+              }
+          }
+          console.log('Debug: Data being set to form:', filteredFieldsToUpdate); // 6d. Log data to set to form
+
+          form.setFieldsValue(filteredFieldsToUpdate);
+          message.success('AI成功生成了描述信息！');
+
+        } catch (error) {
+          console.error('Debug: Error in Modal.confirm onOk during AI call:', error); // 7. Log error in onOk
+          message.error(`AI描述生成失败: ${error.message || '请稍后再试'}`);
+        } finally {
+          setAiLoading(false);
+          console.log('Debug: aiLoading set to false in onOk finally block.'); // 7a. Log aiLoading reset
+        }
+      },
+      onCancel: () => {
+        console.log('Debug: Modal.confirm onCancel triggered.'); // 8. Log onCancel
+      },
+    });
+    console.log('Debug: Modal.confirm has been invoked.'); // 9. Log after Modal.confirm call
   };
 
   const renderField = (field) => {
+    // ... (renderField function remains the same)
     switch (field.type) {
       case 'text':
         return <Input placeholder={field.example || field.description} disabled={field.name === 'id'} />;
@@ -193,10 +257,10 @@ const SkuFormModal = ({
     }
   };
 
-  const requiredFields = fieldsConfig.filter(field => field.isMandatory && field.name !== 'id');
-  const otherFields = fieldsConfig.filter(field => !field.isMandatory && field.name !== 'id');
+  const requiredFields = fieldsConfig ? fieldsConfig.filter(field => field.isMandatory && field.name !== 'id') : [];
+  const otherFields = fieldsConfig ? fieldsConfig.filter(field => !field.isMandatory && field.name !== 'id') : [];
 
-  const canUseAI = fieldsConfig.some(
+  const canUseAI = fieldsConfig && fieldsConfig.some(
     f => AI_INPUT_FIELDS.includes(f.name) || 
          ['title', 'short_desc', 'long_desc', 'key_features_1', 'key_features_2', 'key_features_3', 'key_features_4', 'key_features_5'].includes(f.name)
   );
@@ -222,13 +286,12 @@ const SkuFormModal = ({
       <Form form={form} layout="vertical" name="skuForm">
         {showAllMode && requiredFields.length > 0 && (
           <div style={{ marginBottom: '24px', border: '1px solid #d9d9d9', padding: '16px', borderRadius: '8px' }}>
-            {/* Updated Row for title and AI button */}
             <Row align="middle" style={{ marginBottom: '16px' }}>
               <Col>
                 <h3 style={{ marginTop: 0, marginBottom: 0, color: '#1890ff' }}>Required Fields (Mandatory)</h3>
               </Col>
               {canUseAI && (
-                <Col style={{ marginLeft: '16px' }}> {/* Added marginLeft for spacing */}
+                <Col style={{ marginLeft: '16px' }}> 
                   <Button
                     key="aiGenerateRequired"
                     onClick={handleAIGenerate}
@@ -275,8 +338,8 @@ const SkuFormModal = ({
         <div style={showAllMode ? { border: '1px solid #d9d9d9', padding: '16px', borderRadius: '8px' } : {}}>
             {showAllMode && <h3 style={{ marginTop: 0, color: '#1890ff' }}>Other Fields</h3>}
             <Row gutter={16}>
-              {(showAllMode ? fieldsConfig : otherFields).map((field) => {
-                if (field.name === 'id') return null; 
+              {(showAllMode && fieldsConfig ? fieldsConfig : otherFields).map((field) => { // Added fieldsConfig check for safety
+                if (!field || field.name === 'id') return null; 
                 if (showAllMode && field.isMandatory) return null;
 
                 return (
