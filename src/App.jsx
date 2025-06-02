@@ -9,28 +9,41 @@ import { UploadOutlined, EditOutlined, DeleteOutlined, PlusOutlined, ExportOutli
 import SkuFormModal from './components/SkuFormModal';
 import EditableCell from './components/EditableCell';
 import { getAllSkus, createSku, updateSku, deleteSku, uploadSkuCsv } from './services/skuApiService';
+import AuthForm from './components/AuthForm'; // 导入 AuthForm 组件
 
 const App = () => {
   const [form] = Form.useForm();
   const [dataSource, setDataSource] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
-  const [isModalOpen, setIsModalOpen] = useState(false); 
-  const [editingSku, setEditingSku] = useState(null); 
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingSku, setEditingSku] = useState(null);
   const fileInputRef = useRef(null);
   const [errorMessages, setErrorMessages] = useState([]);
   const [formApiFieldErrors, setFormApiFieldErrors] = useState([]);
 
   const [editingKey, setEditingKey] = useState('');
-  const [editingRowData, setEditingRowData] = useState({}); 
+  const [editingRowData, setEditingRowData] = useState({});
 
   const [isViewAllModalOpen, setIsViewAllModalOpen] = useState(false);
   const [viewingSku, setViewingSku] = useState(null);
 
+  // 新增登录状态
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // 检查本地存储中的 token，判断用户是否已登录
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      setIsLoggedIn(true);
+      fetchSkusWithHandling(); // 如果已登录，则加载 SKU 数据
+    }
+  }, []);
+
   const handleInlineFormValuesChange = (changedValues, allValues) => {
     setEditingRowData(prev => ({ ...prev, ...changedValues }));
   };
-  
+
   const fetchSkusWithHandling = async () => {
     setLoading(true);
     setErrorMessages([]);
@@ -48,16 +61,24 @@ const App = () => {
     }
   };
 
-  useEffect(() => {
-    fetchSkusWithHandling();
-  }, []);
+  const handleAuthSuccess = () => {
+    setIsLoggedIn(true);
+    fetchSkusWithHandling(); // 登录成功后加载数据
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('access_token');
+    setIsLoggedIn(false);
+    setDataSource([]); // 清空数据
+    message.info('您已退出登录。');
+  };
 
   const isEditing = (record) => record.key === editingKey;
 
   const edit = (record) => {
     if (editingKey && editingKey !== record.key) {
       message.warning('Please save or cancel the current editing row before editing another!');
-      return; 
+      return;
     }
 
     const initialValues = { ...record };
@@ -75,13 +96,13 @@ const App = () => {
     });
 
     form.setFieldsValue(initialValues);
-    setEditingRowData(initialValues); 
+    setEditingRowData(initialValues);
     setEditingKey(record.key);
   };
 
   const cancel = () => {
     setEditingKey('');
-    setEditingRowData({}); 
+    setEditingRowData({});
     setFormApiFieldErrors([]);
   };
 
@@ -115,13 +136,13 @@ const App = () => {
           }
       });
 
-      const { key: _, ...apiPayload } = updatedItem; 
+      const { key: _, ...apiPayload } = updatedItem;
 
-      if (String(key).startsWith('new-temp-id')) { 
+      if (String(key).startsWith('new-temp-id')) {
         await createSku(apiPayload);
         message.success('SKU created successfully!');
-      } else { 
-        await updateSku(apiPayload.id, apiPayload); 
+      } else {
+        await updateSku(apiPayload.id, apiPayload);
         message.success('SKU updated successfully!');
       }
 
@@ -146,13 +167,13 @@ const App = () => {
 
   const getTableColumns = () => {
     const orderedDisplayFields = [
-      'vendor_sku', 'UPC', 'product_en_name', 
+      'vendor_sku', 'UPC', 'product_en_name',
       'dropship_price', 'brand',
       'net_weight', 'gross_weight', 'product_height', 'product_length', 'product_width',
       'box_height', 'box_length', 'box_width', 'main_image', 'size_chart_image',
       'allow_dropship_return', 'condition', 'UOM', 'ship_from', 'ship_to', 'ship_carrier',
       'title', 'short_desc', 'keywords', 'key_features_1', 'key_features_2',
-      'full_image', 'thumbnail_image', 
+      'full_image', 'thumbnail_image',
       'status'
     ];
 
@@ -251,13 +272,13 @@ const App = () => {
     }
 
     const newSku = {
-      key: `new-temp-id-${Date.now()}`, 
-      id: 'new-temp-id', 
+      key: `new-temp-id-${Date.now()}`,
+      id: 'new-temp-id',
       ...fieldsConfig.reduce((acc, field) => {
         if (field.defaultValue !== undefined) {
           acc[field.name] = field.defaultValue;
         } else if (field.type === 'number') {
-            acc[field.name] = null; 
+            acc[field.name] = null;
         } else if (field.type === 'select') {
             let selectDefault = null;
             if (field.defaultValue !== undefined) {
@@ -270,7 +291,7 @@ const App = () => {
             acc[field.name] = null;
         } else {
             if (field.isMandatory) {
-                acc[field.name] = ''; 
+                acc[field.name] = '';
             } else {
                 acc[field.name] = null;
             }
@@ -280,7 +301,7 @@ const App = () => {
     };
 
     setDataSource([...dataSource, newSku]);
-    edit(newSku); 
+    edit(newSku);
   };
 
   const handleDelete = async (skuIdToDelete) => {
@@ -289,19 +310,19 @@ const App = () => {
     try {
       if (editingKey === skuIdToDelete && String(skuIdToDelete).startsWith('new-temp-id')) {
         setDataSource(dataSource.filter(item => item.key !== skuIdToDelete));
-        setEditingKey(''); 
+        setEditingKey('');
         setEditingRowData({});
         message.success('New SKU discarded!');
-      } else { 
+      } else {
         const skuToDelete = dataSource.find(item => item.key === skuIdToDelete);
         if (!skuToDelete || String(skuToDelete.id).startsWith('new-temp-id')) {
             message.error('Cannot delete. SKU ID not found or is a temporary ID.');
             setLoading(false);
             return;
         }
-        await deleteSku(skuToDelete.id); 
+        await deleteSku(skuToDelete.id);
         message.success('SKU deleted successfully!');
-        fetchSkusWithHandling(); 
+        fetchSkusWithHandling();
       }
       setSelectedRowKeys(prevKeys => prevKeys.filter(k => k !== skuIdToDelete));
     } catch (error) {
@@ -322,7 +343,7 @@ const App = () => {
     setErrorMessages([]);
     let successCount = 0;
     const currentErrors = [];
-    const remainingSelectedKeys = [...selectedRowKeys]; 
+    const remainingSelectedKeys = [...selectedRowKeys];
 
     for (const skuKey of selectedRowKeys) {
       try {
@@ -332,7 +353,7 @@ const App = () => {
             setEditingKey('');
             setEditingRowData({});
           }
-          successCount++; 
+          successCount++;
           remainingSelectedKeys.splice(remainingSelectedKeys.indexOf(skuKey), 1);
         } else {
           const skuToDelete = dataSource.find(item => item.key === skuKey);
@@ -355,13 +376,13 @@ const App = () => {
       message.success(`Successfully deleted ${successCount} SKUs!`);
     }
     if (currentErrors.length > 0) {
-      setErrorMessages(prev => [...prev, ...currentErrors]); 
+      setErrorMessages(prev => [...prev, ...currentErrors]);
       message.error(`There were ${currentErrors.length} SKUs that failed to delete or were already removed. Please check prompts.`);
     }
     if (successCount > 0 || selectedRowKeys.some(key => String(key).startsWith('new-temp-id'))) {
-         fetchSkusWithHandling(); 
+         fetchSkusWithHandling();
     }
-    setSelectedRowKeys(remainingSelectedKeys); 
+    setSelectedRowKeys(remainingSelectedKeys);
   };
 
   const handleModalSubmit = async (values, initialDataParam) => {
@@ -369,7 +390,7 @@ const App = () => {
     setFormApiFieldErrors([]);
     try {
       let success = false;
-      const submissionValues = { ...values }; 
+      const submissionValues = { ...values };
 
       if (initialDataParam && initialDataParam.id) {
         submissionValues.id = initialDataParam.id;
@@ -395,12 +416,12 @@ const App = () => {
         }
       });
 
-      if (initialDataParam && initialDataParam.id && !String(initialDataParam.id).startsWith('new-temp-id')) { 
+      if (initialDataParam && initialDataParam.id && !String(initialDataParam.id).startsWith('new-temp-id')) {
         await updateSku(initialDataParam.id, submissionValues);
         message.success('SKU updated successfully!');
         success = true;
-      } else { 
-        const { id: tempId, ...payload } = submissionValues; 
+      } else {
+        const { id: tempId, ...payload } = submissionValues;
         await createSku(payload);
         message.success('SKU created successfully!');
         success = true;
@@ -408,11 +429,11 @@ const App = () => {
 
       if (success) {
         fetchSkusWithHandling();
-        if (initialDataParam === editingSku) { 
+        if (initialDataParam === editingSku) {
             handleModalClose();
-        } else if (initialDataParam === viewingSku) { 
+        } else if (initialDataParam === viewingSku) {
             handleViewAllModalClose();
-        } else { 
+        } else {
             handleModalClose();
         }
       }
@@ -433,8 +454,8 @@ const App = () => {
   };
 
   const handleModalClose = () => { setIsModalOpen(false); setEditingSku(null); setFormApiFieldErrors([]); };
-  const handleViewAllModalClose = () => { setIsViewAllModalOpen(false); setViewingSku(null); setFormApiFieldErrors([]); }; 
-  
+  const handleViewAllModalClose = () => { setIsViewAllModalOpen(false); setViewingSku(null); setFormApiFieldErrors([]); };
+
   const handleExport = () => {
     const exportFieldsOrder = [
       { header: 'Vendor SKU', dataKey: 'vendor_sku' },
@@ -541,7 +562,7 @@ const App = () => {
       { header: 'Material 3 Percentage', dataKey: 'material_3_percentage' },
       { header: 'Material 4 Name', dataKey: 'material_name_4' },
       { header: 'Material 4 Percentage', dataKey: 'material_4_percentage' },
-      { header: 'Material 5 Name', dataKey: 'material_name_5' },
+      { header: 'Material 5 Name', dataKey: 'material_5_percentage' },
       { header: 'Material 5 Percentage', dataKey: 'material_5_percentage' },
       { header: 'Additional Color 1', dataKey: 'additional_color_1' },
       { header: 'Additional Color 2', dataKey: 'additional_color_2' },
@@ -559,7 +580,7 @@ const App = () => {
     const getLabel = (options, value) => {
       const stringValue = value !== undefined && value !== null ? String(value) : undefined;
       const option = options.find(opt => opt.value === stringValue);
-      return option ? option.label : stringValue; 
+      return option ? option.label : stringValue;
     };
 
     const sheetData = dataToExport.map(sku => {
@@ -570,16 +591,16 @@ const App = () => {
         } else if (field.type === 'condition') {
           value = getLabel(conditionOptions, value);
         } else if (field.type === 'booleanToLabel') {
-          const valStr = String(sku[field.dataKey]).toLowerCase(); 
+          const valStr = String(sku[field.dataKey]).toLowerCase();
           if (valStr === 'true') {
               value = 'Yes';
           } else if (valStr === 'false') {
               value = 'No';
-          } else { 
-              value = sku[field.dataKey]; 
+          } else {
+              value = sku[field.dataKey];
           }
         }
-        return value !== undefined && value !== null ? value : ''; 
+        return value !== undefined && value !== null ? value : '';
       });
     });
 
@@ -587,22 +608,22 @@ const App = () => {
     const worksheet = XLSX.utils.aoa_to_sheet([headers, ...sheetData]);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'SKUs');
-    
+
     const now = new Date();
     const timestamp = `${now.getFullYear().toString().slice(-2)}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}${now.getSeconds().toString().padStart(2, '0')}`;
     XLSX.writeFile(workbook, `skus_${timestamp}.xlsx`);
     message.success('SKU data exported successfully!');
   };
-  
+
   const handleCsvUpload = async (options) => {
     const { file, onSuccess, onError } = options;
     setLoading(true);
     setErrorMessages([]);
     try {
       const response = await uploadSkuCsv(file);
-      onSuccess(response, file); 
+      onSuccess(response, file);
       message.success(`${file.name} uploaded and processed successfully!`);
-      fetchSkusWithHandling(); 
+      fetchSkusWithHandling();
     } catch (error) {
       console.error("CSV Upload failed:", error);
       let errorMessage = `Failed to upload ${file.name}: `;
@@ -620,20 +641,28 @@ const App = () => {
         errorMessage += 'Unknown error during upload.';
         setErrorMessages(prev => [...prev, `Upload error for ${file.name}: Unknown error.`]);
       }
-      onError(error); 
-      message.error(errorMessage, 10); 
+      onError(error);
+      message.error(errorMessage, 10);
     } finally {
       setLoading(false);
       if (fileInputRef.current && fileInputRef.current.fileList) {
-        fileInputRef.current.fileList = []; 
+        fileInputRef.current.fileList = [];
       }
     }
   };
 
+  if (!isLoggedIn) {
+    return <AuthForm onAuthSuccess={handleAuthSuccess} />;
+  }
+
   return (
     <ConfigProvider locale={zhCN}>
       <div className="App">
-        <h1 style={{ color: 'black' }}>SKU Management System</h1>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h1 style={{ color: 'black', margin: 0 }}>SKU Management System</h1>
+            <Button onClick={handleLogout} type="default">退出登录</Button>
+        </div>
+
         {errorMessages.length > 0 && (
           <Alert
             message="Operation Information / Errors"
@@ -693,10 +722,10 @@ const App = () => {
             bordered
             rowKey="key"
             pagination={{
-                onChange: cancel, 
-                pageSizeOptions: ['15', '20', '50', '100', '200'], // Added '15'
+                onChange: cancel,
+                pageSizeOptions: ['15', '20', '50', '100', '200'],
                 showSizeChanger: true,
-                defaultPageSize: 15, // Changed to 15
+                defaultPageSize: 15,
               }}
           />
         </Form>
@@ -708,24 +737,24 @@ const App = () => {
         <SkuFormModal
           visible={isModalOpen}
           onClose={handleModalClose}
-          onSubmit={(values) => handleModalSubmit(values, editingSku)} 
+          onSubmit={(values) => handleModalSubmit(values, editingSku)}
           initialData={editingSku}
           fieldsConfig={fieldsConfig}
           statusOptions={statusOptions}
           conditionOptions={conditionOptions}
           apiFieldErrors={formApiFieldErrors}
-          showAllMode={true} 
+          showAllMode={true}
         />
         <SkuFormModal
           visible={isViewAllModalOpen}
           onClose={handleViewAllModalClose}
-          onSubmit={(values) => handleModalSubmit(values, viewingSku)} 
+          onSubmit={(values) => handleModalSubmit(values, viewingSku)}
           initialData={viewingSku}
           fieldsConfig={fieldsConfig}
           statusOptions={statusOptions}
           conditionOptions={conditionOptions}
           apiFieldErrors={formApiFieldErrors}
-          showAllMode={true} 
+          showAllMode={true}
         />
       </div>
     </ConfigProvider>

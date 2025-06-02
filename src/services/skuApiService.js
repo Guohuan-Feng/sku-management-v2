@@ -1,5 +1,8 @@
-const API_BASE_URL = 'https://ebay-oauth.onrender.com/JFJP/skus'; // 从您提供的URL更新
-const AI_API_BASE_URL = 'https://ebay-oauth.onrender.com/JFJP'; // 新增 AI 服务的根 URL
+// src/services/skuApiService.js
+
+const API_BASE_URL = 'https://ebay-oauth.onrender.com/JFJP/skus';
+const AUTH_API_BASE_URL = 'https://ebay-oauth.onrender.com/JFJP/auth'; // 新增认证服务的根 URL
+const AI_API_BASE_URL = 'https://ebay-oauth.onrender.com/JFJP';
 
 // 辅助函数处理 API 响应
 const handleResponse = async (response) => {
@@ -35,11 +38,13 @@ const handleResponse = async (response) => {
   return response.json();
 };
 
+// 获取所有 SKU 的 API 调用
 export const getAllSkus = async () => {
   const response = await fetch(`${API_BASE_URL}/get-all-sku`);
   return handleResponse(response);
 };
 
+// 创建 SKU 的 API 调用
 export const createSku = async (skuData) => {
   const response = await fetch(`${API_BASE_URL}/create-sku`, {
     method: 'POST',
@@ -51,6 +56,7 @@ export const createSku = async (skuData) => {
   return handleResponse(response);
 };
 
+// 更新 SKU 的 API 调用
 export const updateSku = async (skuId, skuData) => {
   const response = await fetch(`${API_BASE_URL}/update/${skuId}`, {
     method: 'PUT',
@@ -62,6 +68,7 @@ export const updateSku = async (skuId, skuData) => {
   return handleResponse(response);
 };
 
+// 删除 SKU 的 API 调用
 export const deleteSku = async (skuId) => {
   const response = await fetch(`${API_BASE_URL}/delete/${skuId}`, {
     method: 'DELETE',
@@ -69,6 +76,7 @@ export const deleteSku = async (skuId) => {
   return handleResponse(response);
 };
 
+// 上传 SKU CSV 的 API 调用
 export const uploadSkuCsv = async (file) => {
   const formData = new FormData();
   formData.append('file', file);
@@ -76,12 +84,11 @@ export const uploadSkuCsv = async (file) => {
   const response = await fetch(`${API_BASE_URL}/uploads`, {
     method: 'POST',
     body: formData,
-    // 注意: 使用 FormData 时, Content-Type header 会由浏览器自动设置, 通常不需要手动指定
   });
   return handleResponse(response);
 };
 
-// 新增: 调用 AI 生成描述的 API
+// 调用 AI 生成描述的 API
 export const generateAIDescription = async (data) => {
   const response = await fetch(`${AI_API_BASE_URL}/AI-generate-desc`, {
     method: 'POST',
@@ -89,6 +96,30 @@ export const generateAIDescription = async (data) => {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(data),
+  });
+  return handleResponse(response);
+};
+
+// 新增: 用户注册 API 调用
+export const registerUser = async (email, password) => {
+  const response = await fetch(`${AUTH_API_BASE_URL}/register`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email, password }),
+  });
+  return handleResponse(response);
+};
+
+// 新增: 用户登录 API 调用
+export const loginUser = async (email, password) => {
+  const response = await fetch(`${AUTH_API_BASE_URL}/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email, password }),
   });
   return handleResponse(response);
 };
