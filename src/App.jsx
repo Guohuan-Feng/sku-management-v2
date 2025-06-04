@@ -167,7 +167,7 @@ const App = () => {
 
   const getTableColumns = () => {
     const orderedDisplayFields = [
-      'vendor_sku', 'UPC', 'product_en_name',
+      'vendor_sku', 'UPC', 'product_en_name', 'product_cn_name',
       'dropship_price', 'brand',
       'net_weight', 'gross_weight', 'product_height', 'product_length', 'product_width',
       'box_height', 'box_length', 'box_width', 'main_image', 'size_chart_image',
