@@ -171,7 +171,6 @@ const App = () => {
       'dropship_price', 'brand',
       'net_weight', 'gross_weight', 'product_height', 'product_length', 'product_width',
       'box_height', 'box_length', 'box_width', 'main_image', 'size_chart_image',
-      'status'
     ];
 
     const columnsToDisplay = orderedDisplayFields
