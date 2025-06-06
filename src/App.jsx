@@ -171,9 +171,6 @@ const App = () => {
       'dropship_price', 'brand',
       'net_weight', 'gross_weight', 'product_height', 'product_length', 'product_width',
       'box_height', 'box_length', 'box_width', 'main_image', 'size_chart_image',
-      'allow_dropship_return', 'condition', 'UOM', 'ship_from', 'ship_to', 'ship_carrier',
-      'title', 'short_desc', 'keywords', 'key_features_1', 'key_features_2',
-      'full_image', 'thumbnail_image',
       'status'
     ];
 

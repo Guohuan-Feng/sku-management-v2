@@ -70,19 +70,26 @@ const mandatoryFieldsFromCSV = [
 
 // Helper function to create validation object
 const createValidation = (field) => {
-  const isMandatoryByList = mandatoryFieldsFromCSV.includes(field.name);
-  const validation = { ...(field.origValidation || {}) };
+  // Initialize validation as an empty object first to ensure it's always defined
+  let validation = {};
 
+  // Then, if there's original validation config, merge it
+  if (field.origValidation) {
+    validation = { ...validation, ...field.origValidation };
+  }
+
+  const isMandatoryByList = mandatoryFieldsFromCSV.includes(field.name);
   // If the field is explicitly marked as required in its original validation, respect that.
   const isOrigRequired = field.origValidation && field.origValidation.required;
 
   if (isMandatoryByList || isOrigRequired) {
-    validation.requiredMsg = validation.requiredMsg || `${field.label} is required.`;
+    // Ensure required is true and a message is present
     validation.required = true;
+    validation.requiredMsg = validation.requiredMsg || `${field.label} is required.`;
   } else {
-    // If not mandatory by list and not in origValidation, remove any accidental requiredMsg
-    delete validation.requiredMsg;
+    // If not mandatory by list and not in origValidation, explicitly set to false and remove any accidental requiredMsg
     validation.required = false;
+    delete validation.requiredMsg;
   }
   return validation;
 };
@@ -306,7 +313,8 @@ const tempFieldsConfig = [
   {
     name: 'UOM', label: 'UOM', type: 'text', gridWidth: 8,
     origValidation: { required: true, maxLength: 50, pattern: generalTextAndSpecialCharsPattern, patternMsg:'Allowed: English, Chinese, numbers, hyphens, spaces, and common special characters. Max 50 characters.', maxLengthMsg:'Max 50 characters.' },
-    description: 'Unit of Measurement.', example: 'Each'
+    description: 'Unit of Measurement.', example: 'Each',
+    defaultValue: 'Each' // Added default value
   },
   {
     name: 'net_weight', label: 'Net Weight', type: 'number', isFee: true, gridWidth: 8,
@@ -370,23 +378,26 @@ const tempFieldsConfig = [
   },
   {
     name: 'care_instructions', label: 'Care Instructions', type: 'textarea', rows: 3, gridWidth: 24,
-    origValidation: { maxLength: 1000, pattern: generalTextAndSpecialCharsPattern, patternMsg:'Invalid characters.', maxLengthMsg:'Max 1000 characters.' },
+    origValidation: { maxLength: 1000, pattern: generalTextAndSpecialCharsPattern, patternMsg:'Invalid characters.', maxLengthMsg:'Max 1000 characters.', required: false },
     description: 'Product care instructions.', example: 'Hand wash cold. Do not bleach.'
   },
   {
     name: 'ship_from', label: 'Ship From', type: 'text', gridWidth: 8,
     origValidation: { required: true, maxLength: 50, pattern: generalTextAndSpecialCharsPattern, patternMsg:'Allowed: English, Chinese, numbers, hyphens, spaces, and common special characters. Max 50 characters.', maxLengthMsg:'Max 50 characters.' },
-    description: 'Origin of product shipment.', example: 'California Warehouse'
+    description: 'Origin of product shipment.', example: 'California Warehouse',
+    defaultValue: 'US' // Added default value
   },
   {
     name: 'ship_to', label: 'Ship To', type: 'text', gridWidth: 8,
     origValidation: { required: true, maxLength: 50, pattern: generalTextAndSpecialCharsPattern, patternMsg:'Allowed: English, Chinese, numbers, hyphens, spaces, and common special characters. Max 50 characters.', maxLengthMsg:'Max 50 characters.' },
-    description: 'Destination for product delivery.', example: 'USA Domestic'
+    description: 'Destination for product delivery.', example: 'USA Domestic',
+    defaultValue: 'US' // Added default value
   },
   {
     name: 'ship_carrier', label: 'Ship Carrier', type: 'text', gridWidth: 8,
     origValidation: { required: true, maxLength: 50, pattern: generalTextAndSpecialCharsPattern, patternMsg:'Allowed: English, Chinese, numbers, hyphens, spaces, and common special characters. Max 50 characters.', maxLengthMsg:'Max 50 characters.' },
-    description: 'Shipping company.', example: 'UPS Ground'
+    description: 'Shipping company.', example: 'UPS Ground',
+    defaultValue: 'UPS, USPS, FedEx' // Added default value
   },
   {
     name: 'ship_desc', label: 'Shipping Description', type: 'textarea', rows: 2, gridWidth: 24,
