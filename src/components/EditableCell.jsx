@@ -39,20 +39,28 @@ const EditableCell = ({
 
   // 根据字段类型选择合适的输入组件
   const inputNode = () => {
+    // 提取 placeholder 文本
+    const placeholderText = field?.example || field?.description || '';
+
     switch (field?.type) {
       case 'text':
-        return <Input />;
+        return <Input placeholder={placeholderText} />;
       case 'number':
-        return <InputNumber precision={field?.isFee ? 2 : 0} style={{ width: '100%' }} />;
+        return <InputNumber
+          style={{ width: '100%' }}
+          placeholder={placeholderText}
+          min={field.validation?.min}
+          precision={field.isFee ? 2 : 0}
+        />;
       case 'textarea':
-        return <TextArea rows={field?.rows || 1} />; // 行内编辑时通常不需要太多行
+        return <TextArea rows={field?.rows || 1} placeholder={placeholderText} />; // 行内编辑时通常不需要太多行
       case 'select':
         let optionsSource = field?.options || [];
         if (field.name === 'status') optionsSource = statusOptions;
         if (field.name === 'condition') optionsSource = conditionOptions;
         if (field.name === 'allow_dropship_return') optionsSource = [{value: 'True', label: 'Yes'}, {value: 'False', label: 'No'}];
         return (
-          <Select>
+          <Select placeholder={placeholderText}>
             {optionsSource.map((opt) => (
               <Option key={opt.value} value={opt.value}>
                 {opt.label}
@@ -61,9 +69,9 @@ const EditableCell = ({
           </Select>
         );
       case 'url':
-        return <Input type="url" />;
+        return <Input type="url" placeholder={placeholderText} />;
       default:
-        return <Input />;
+        return <Input placeholder={placeholderText} />;
     }
   };
 
@@ -74,10 +82,7 @@ const EditableCell = ({
           name={dataIndex}
           style={{ margin: 0 }}
           rules={rules}
-          valuePropName={field?.type === 'select' || field?.name === 'allow_dropship_return' ? 'value' : undefined} // 对于 Select 和 Checkbox (如果用的话)，valuePropName 是 'value'
-          // 注意：移除 initialValue。Form.Item 应该从 Form 组件的 setFieldsValue 或 initialValues 属性中获取值。
-          // 当 App.jsx 的 Form 设置了 initialValues，EditableCell 就不需要再通过 initialValue 传递。
-          // Form.Item 自动会从 Form context 中获取 name 对应的值。
+          valuePropName={field?.type === 'select' || field?.name === 'allow_dropship_return' ? 'value' : undefined}
         >
           {inputNode()}
         </Form.Item>
