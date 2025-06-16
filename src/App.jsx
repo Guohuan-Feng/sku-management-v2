@@ -18,10 +18,10 @@ import zhCN from 'antd/locale/zh_CN';
 import { useTranslation } from 'react-i18next';
 
 // 假设图片中的 Logo 是一个本地图片，或者你可以替换为CDN链接
-import JFJPLogo from '/JFJP_logo.png'; // 假设你有一个 JFJP_logo.png 在 public 目录下
+import JFJPLogo from '/JFJP_logo.png';
 
 const App = () => {
-  const { t, i18n } = useTranslation(); // 使用 useTranslation 钩子
+  const { t, i18n } = useTranslation();
   const [form] = Form.useForm();
   const [dataSource, setDataSource] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -67,11 +67,11 @@ const App = () => {
     try {
       const data = await getAllSkus();
       setDataSource(data.map(item => ({ ...item, key: item.id })));
-      message.success(t('messages.skuDataLoaded')); // 翻译
+      message.success(t('messages.skuDataLoaded'));
     } catch (error) {
       console.error("Failed to fetch SKUs:", error);
-      message.error(`${t('messages.failedToFetchSkus')}${error.message}`); // 翻译
-      setErrorMessages(prev => [...prev, `${t('messages.failedToFetchSkus')}${error.message}`]); // 翻译
+      message.error(`${t('messages.failedToFetchSkus')}${error.message}`);
+      setErrorMessages(prev => [...prev, `${t('messages.failedToFetchSkus')}${error.message}`]);
       setDataSource([]);
     } finally {
       setLoading(false);
@@ -81,21 +81,21 @@ const App = () => {
   const handleAuthSuccess = () => {
     setIsLoggedIn(true);
     fetchSkusWithHandling();
-    message.success(t('messages.loggedIn')); // 翻译
+    message.success(t('messages.loggedIn'));
   };
 
   const handleLogout = () => {
     localStorage.removeItem('access_token');
     setIsLoggedIn(false);
     setDataSource([]);
-    message.info(t('messages.loggedOut')); // 翻译
+    message.info(t('messages.loggedOut'));
   };
 
   const isEditing = (record) => record.key === editingKey;
 
   const edit = (record) => {
     if (editingKey) {
-      message.warning(t('tableOperations.saveOrCancelCurrentEdit')); // 翻译
+      message.warning(t('tableOperations.saveOrCancelCurrentEdit'));
       return;
     }
 
@@ -158,10 +158,10 @@ const App = () => {
 
       if (String(key).startsWith('new-temp-id')) {
         await createSku(apiPayload);
-        message.success(t('messages.skuCreated')); // 翻译
+        message.success(t('messages.skuCreated'));
       } else {
         await updateSku(apiPayload.id, apiPayload);
-        message.success(t('messages.skuUpdated')); // 翻译
+        message.success(t('messages.skuUpdated'));
       }
 
       fetchSkusWithHandling();
@@ -170,13 +170,13 @@ const App = () => {
     } catch (errInfo) {
       console.error('Validate Failed (Save Inline):', errInfo);
       if (errInfo.errorFields) {
-        message.error(t('messages.validationFailed')); // 翻译
+        message.error(t('messages.validationFailed'));
       } else if (errInfo.fieldErrors && Array.isArray(errInfo.fieldErrors)) {
         setFormApiFieldErrors(errInfo.fieldErrors);
         const apiErrorsMsg = errInfo.fieldErrors.map(e => `${e.loc[e.loc.length - 1]}: ${e.msg}`).join('; ');
-        message.error(t('messages.apiError', { message: apiErrorsMsg })); // 翻译
+        message.error(t('messages.apiError', { message: apiErrorsMsg }));
       } else {
-        message.error(t('messages.failedToSaveSku', { message: errInfo.message || 'Unknown error' })); // 翻译
+        message.error(t('messages.failedToSaveSku', { message: errInfo.message || 'Unknown error' }));
       }
     } finally {
       setLoading(false);
@@ -184,13 +184,9 @@ const App = () => {
   };
 
   const getTableColumns = () => {
-    // 调整显示字段以匹配图片，并确保所有 mandatoryFieldsFromCSV 中的字段都在这里
-    // 优先使用图片中的顺序，然后补充其他重要字段
     const orderedDisplayFields = [
       'vendor_sku', 'UPC', 'product_en_name', 'product_cn_name',
       'dropship_price', 'brand',
-      // 以下字段在图片中未直接显示，但为了完整性，通常表格会包含
-      // 如果你希望表格更精简，可以移除这些
       'net_weight', 'gross_weight', 'product_height', 'product_length', 'product_width',
       'box_height', 'box_length', 'box_width', 'main_image', 'size_chart_image',
     ];
@@ -204,7 +200,7 @@ const App = () => {
         if (field.name === 'id') return null;
 
         return {
-          title: t(field.label), // 翻译字段标题
+          title: t(field.label),
           dataIndex: field.name,
           key: field.name,
           width: field.name === 'vendor_sku' ? 180 : (field.type === 'textarea' || field.name.toLowerCase().includes('desc') ? 250 : 150),
@@ -218,7 +214,7 @@ const App = () => {
                 dataIndex={field.name}
                 inputType={field.type}
                 record={record}
-                title={t(field.label)} // 翻译
+                title={t(field.label)}
               >
                 {text}
               </EditableCell>
@@ -230,7 +226,7 @@ const App = () => {
             record,
             inputType: field.type,
             dataIndex: field.name,
-            title: t(field.label), // 翻译
+            title: t(field.label),
             editing: isEditing(record),
             onClick: () => {
               if (!isEditing(record)) {
@@ -242,7 +238,7 @@ const App = () => {
       }).filter(Boolean);
 
     generatedColumns.push({
-      title: t('tableColumns.operation'), // 翻译
+      title: t('tableColumns.operation'),
       dataIndex: 'operation',
       key: 'operation',
       fixed: 'right',
@@ -253,17 +249,17 @@ const App = () => {
         return editable ? (
           <Space size="small">
             <Button type="link" icon={<SaveOutlined />} onClick={() => save(record.key)} loading={loading}>
-              {t('tableOperations.save')} {/* 翻译 */}
+              {t('tableOperations.save')}
             </Button>
-            <Popconfirm title={t('tableOperations.cancel')} onConfirm={cancel}> {/* 翻译 */}
+            <Popconfirm title={t('tableOperations.cancel')} onConfirm={cancel}>
               <Button type="link" icon={<CloseOutlined />} danger>
-                {t('tableOperations.cancel')} {/* 翻译 */}
+                {t('tableOperations.cancel')}
               </Button>
             </Popconfirm>
           </Space>
         ) : (
           <Space size="small">
-            <Button icon={<EditOutlined />} onClick={() => edit(record)} type="link">{t('tableOperations.edit')}</Button> {/* 翻译 */}
+            <Button icon={<EditOutlined />} onClick={() => edit(record)} type="link">{t('tableOperations.edit')}</Button>
             <Button
               icon={<EyeOutlined />}
               onClick={() => {
@@ -272,15 +268,15 @@ const App = () => {
               }}
               type="link"
             >
-              {t('tableOperations.showAll')} {/* 翻译 */}
+              {t('tableOperations.showAll')}
             </Button>
             <Popconfirm
-              title={t('tableOperations.deleteConfirmTitle')} // 翻译
+              title={t('tableOperations.deleteConfirmTitle')}
               onConfirm={() => handleDelete(record.key)}
-              okText={t('modalButtons.update')} // 可以复用 update 按钮的文本
-              cancelText={t('modalButtons.cancel')} // 可以复用 cancel 按钮的文本
+              okText={t('modalButtons.update')}
+              cancelText={t('modalButtons.cancel')}
             >
-              <Button icon={<DeleteOutlined />} type="link" danger>{t('tableOperations.delete')}</Button> {/* 翻译 */}
+              <Button icon={<DeleteOutlined />} type="link" danger>{t('tableOperations.delete')}</Button>
             </Popconfirm>
           </Space>
         );
@@ -301,7 +297,7 @@ const App = () => {
 
   const handleAddInline = () => {
     if (editingKey) {
-      message.warning(t('tableOperations.saveOrCancelCurrentEdit')); // 翻译
+      message.warning(t('tableOperations.saveOrCancelCurrentEdit'));
       return;
     }
 
@@ -346,23 +342,23 @@ const App = () => {
         setDataSource(dataSource.filter(item => item.key !== skuIdToDelete));
         setEditingKey('');
         setEditingRowData({});
-        message.success(t('tableOperations.discardNewSku')); // 翻译
+        message.success(t('tableOperations.discardNewSku'));
       } else {
         const skuToDelete = dataSource.find(item => item.key === skuIdToDelete);
         if (!skuToDelete || String(skuToDelete.id).startsWith('new-temp-id')) {
-            message.error(t('messages.skuIDNotFoundOrTemp')); // 翻译
+            message.error(t('messages.skuIDNotFoundOrTemp'));
             setLoading(false);
             return;
         }
         await deleteSku(skuToDelete.id);
-        message.success(t('tableOperations.deleteSuccess')); // 翻译
+        message.success(t('tableOperations.deleteSuccess'));
         fetchSkusWithHandling();
       }
       setSelectedRowKeys(prevKeys => prevKeys.filter(k => k !== skuIdToDelete));
     } catch (error) {
       console.error('Failed to delete SKU:', error);
-      message.error(`${t('tableOperations.deleteError')}${error.message}`); // 翻译
-      setErrorMessages(prev => [...prev, `${t('tableOperations.deleteError')}ID ${skuIdToDelete}: ${error.message}`]); // 翻译
+      message.error(`${t('tableOperations.deleteError')}${error.message}`);
+      setErrorMessages(prev => [...prev, `${t('tableOperations.deleteError')}ID ${skuIdToDelete}: ${error.message}`]);
     } finally {
       setLoading(false);
     }
@@ -370,7 +366,7 @@ const App = () => {
 
   const handleDeleteSelected = async () => {
     if (selectedRowKeys.length === 0) {
-      message.warning(t('tableOperations.selectToDelete')); // 翻译
+      message.warning(t('tableOperations.selectToDelete'));
       return;
     }
     setLoading(true);
@@ -396,22 +392,22 @@ const App = () => {
             successCount++;
             remainingSelectedKeys.splice(remainingSelectedKeys.indexOf(skuKey), 1);
           } else {
-             currentErrors.push(t('messages.skuIDNotFoundOrTemp', { key: skuKey })); // 翻译
+             currentErrors.push(t('messages.skuIDNotFoundOrTemp', { key: skuKey }));
           }
         }
       } catch (error) {
         console.error(`Failed to delete SKU with key ${skuKey}:`, error);
-        currentErrors.push(`${t('tableOperations.deleteError')} key ${skuKey}: ${error.message}`); // 翻译
+        currentErrors.push(`${t('tableOperations.deleteError')} key ${skuKey}: ${error.message}`);
       }
     }
 
     setLoading(false);
     if (successCount > 0) {
-      message.success(t('tableOperations.deleteSelectedSuccess', { count: successCount })); // 翻译
+      message.success(t('tableOperations.deleteSelectedSuccess', { count: successCount }));
     }
     if (currentErrors.length > 0) {
       setErrorMessages(prev => [...prev, ...currentErrors]);
-      message.error(t('tableOperations.deleteSelectedError', { count: currentErrors.length })); // 翻译
+      message.error(t('tableOperations.deleteSelectedError', { count: currentErrors.length }));
     }
     if (successCount > 0 || selectedRowKeys.some(key => String(key).startsWith('new-temp-id'))) {
          fetchSkusWithHandling();
@@ -452,12 +448,12 @@ const App = () => {
 
       if (initialDataParam && initialDataParam.id && !String(initialDataParam.id).startsWith('new-temp-id')) {
         await updateSku(initialDataParam.id, submissionValues);
-        message.success(t('messages.skuUpdated')); // 翻译
+        message.success(t('messages.skuUpdated'));
         success = true;
       } else {
         const { id: tempId, ...payload } = submissionValues;
         await createSku(payload);
-        message.success(t('messages.skuCreated')); // 翻译
+        message.success(t('messages.skuCreated'));
         success = true;
       }
 
@@ -477,9 +473,9 @@ const App = () => {
       if (error.fieldErrors) {
         setFormApiFieldErrors(error.fieldErrors);
         const apiErrorsMsg = error.fieldErrors.map(e => `${e.loc[e.loc.length - 1]}: ${e.msg}`).join('; ');
-        message.error(t('messages.apiError', { message: apiErrorsMsg })); // 翻译
+        message.error(t('messages.apiError', { message: apiErrorsMsg }));
       } else {
-        message.error(t('messages.failedToSaveSku', { message: error.message || 'Unknown error' })); // 翻译
+        message.error(t('messages.failedToSaveSku', { message: error.message || 'Unknown error' }));
       }
       return false;
     } finally {
@@ -492,115 +488,115 @@ const App = () => {
 
   const handleExport = () => {
     const exportFieldsOrder = [
-      { header: t('field.vendor_sku'), dataKey: 'vendor_sku' }, // 翻译
-      { header: t('field.UPC'), dataKey: 'UPC' }, // 翻译
-      { header: t('field.product_en_name'), dataKey: 'product_en_name' }, // 翻译
-      { header: t('field.product_cn_name'), dataKey: 'product_cn_name' }, // 翻译
-      { header: t('field.status'), dataKey: 'status', type: 'status' }, // 翻译
-      { header: t('field.ATS'), dataKey: 'ATS' }, // 翻译
-      { header: t('field.dropship_price'), dataKey: 'dropship_price' }, // 翻译
-      { header: t('field.MSRP'), dataKey: 'MSRP' }, // 翻译
-      { header: t('field.HDL_for_shipping'), dataKey: 'HDL_for_shipping' }, // 翻译
-      { header: t('field.HDL_for_receiving'), dataKey: 'HDL_for_receiving' }, // 翻译
-      { header: t('field.HDL_for_returning'), dataKey: 'HDL_for_returning' }, // 翻译
-      { header: t('field.storage_monthly'), dataKey: 'storage_monthly' }, // 翻译
-      { header: t('field.allow_dropship_return'), dataKey: 'allow_dropship_return', type: 'booleanToLabel' }, // 翻译
-      { header: t('field.shipping_lead_time'), dataKey: 'shipping_lead_time' }, // 翻译
-      { header: t('field.division'), dataKey: 'division' }, // 翻译
-      { header: t('field.department'), dataKey: 'department' }, // 翻译
-      { header: t('field.category'), dataKey: 'category' }, // 翻译
-      { header: t('field.sub_category'), dataKey: 'sub_category' }, // 翻译
-      { header: t('field.product_class'), dataKey: 'product_class' }, // 翻译
-      { header: t('field.group'), dataKey: 'group' }, // 翻译
-      { header: t('field.subgroup'), dataKey: 'subgroup' }, // 翻译
-      { header: t('field.style'), dataKey: 'style' }, // 翻译
-      { header: t('field.sub_style'), dataKey: 'sub_style' }, // 翻译
-      { header: t('field.brand'), dataKey: 'brand' }, // 翻译
-      { header: t('field.model'), dataKey: 'model' }, // 翻译
-      { header: t('field.color'), dataKey: 'color' }, // 翻译
-      { header: t('field.size'), dataKey: 'size' }, // 翻译
-      { header: t('field.option_1'), dataKey: 'option_1' }, // 翻译
-      { header: t('field.option_2'), dataKey: 'option_2' }, // 翻译
-      { header: t('field.option_3'), dataKey: 'option_3' }, // 翻译
-      { header: t('field.option_4'), dataKey: 'option_4' }, // 翻译
-      { header: t('field.option_5'), dataKey: 'option_5' }, // 翻译
-      { header: t('field.gender'), dataKey: 'gender' }, // 翻译
-      { header: t('field.age_group'), dataKey: 'age_group' }, // 翻译
-      { header: t('field.country_of_region'), dataKey: 'country_of_region' }, // 翻译
-      { header: t('field.color_code_NRF'), dataKey: 'color_code_NRF' }, // 翻译
-      { header: t('field.color_desc'), dataKey: 'color_desc' }, // 翻译
-      { header: t('field.size_code_NRF'), dataKey: 'size_code_NRF' }, // 翻译
-      { header: t('field.size_desc'), dataKey: 'size_desc' }, // 翻译
-      { header: t('field.manufacturer'), dataKey: 'manufacturer' }, // 翻译
-      { header: t('field.OEM'), dataKey: 'OEM' }, // 翻译
-      { header: t('field.product_year'), dataKey: 'product_year' }, // 翻译
-      { header: t('field.condition'), dataKey: 'condition', type: 'condition' }, // 翻译
-      { header: t('field.prepack_code'), dataKey: 'prepack_code' }, // 翻译
-      { header: t('field.remark'), dataKey: 'remark' }, // 翻译
-      { header: t('field.harmonized_code'), dataKey: 'harmonized_code' }, // 翻译
-      { header: t('field.UOM'), dataKey: 'UOM' }, // 翻译
-      { header: t('field.net_weight'), dataKey: 'net_weight' }, // 翻译
-      { header: t('field.gross_weight'), dataKey: 'gross_weight' }, // 翻译
-      { header: t('field.product_height'), dataKey: 'product_height' }, // 翻译
-      { header: t('field.product_length'), dataKey: 'product_length' }, // 翻译
-      { header: t('field.product_width'), dataKey: 'product_width' }, // 翻译
-      { header: t('field.box_height'), dataKey: 'box_height' }, // 翻译
-      { header: t('field.box_length'), dataKey: 'box_length' }, // 翻译
-      { header: t('field.box_width'), dataKey: 'box_width' }, // 翻译
-      { header: t('field.qty_case'), dataKey: 'qty_case' }, // 翻译
-      { header: t('field.qty_box'), dataKey: 'qty_box' }, // 翻译
-      { header: t('field.material_content'), dataKey: 'material_content' }, // 翻译
-      { header: t('field.tag'), dataKey: 'tag' }, // 翻译
-      { header: t('field.care_instructions'), dataKey: 'care_instructions' }, // 翻译
-      { header: t('field.ship_from'), dataKey: 'ship_from' }, // 翻译
-      { header: t('field.ship_to'), dataKey: 'ship_to' }, // 翻译
-      { header: t('field.ship_carrier'), dataKey: 'ship_carrier' }, // 翻译
-      { header: t('field.ship_desc'), dataKey: 'ship_desc' }, // 翻译
-      { header: t('field.return_policy'), dataKey: 'return_policy' }, // 翻译
-      { header: t('field.security_privacy'), dataKey: 'security_privacy' }, // 翻译
-      { header: t('field.dropship_desc'), dataKey: 'dropship_desc' }, // 翻译
-      { header: t('field.title'), dataKey: 'title' }, // 翻译
-      { header: t('field.short_desc'), dataKey: 'short_desc' }, // 翻译
-      { header: t('field.long_desc'), dataKey: 'long_desc' }, // 翻译
-      { header: t('field.dropship_listing_title'), dataKey: 'dropship_listing_title' }, // 翻译
-      { header: t('field.dropship_short_desc'), dataKey: 'dropship_short_desc' }, // 翻译
-      { header: t('field.dropship_long_desc'), dataKey: 'dropship_long_desc' }, // 翻译
-      { header: t('field.keywords'), dataKey: 'keywords' }, // 翻译
-      { header: t('field.google_product_category'), dataKey: 'google_product_category' }, // 翻译
-      { header: t('field.google_product_type'), dataKey: 'google_product_type' }, // 翻译
-      { header: t('field.facebook_product_category'), dataKey: 'facebook_product_category' }, // 翻译
-      { header: t('field.color_map'), dataKey: 'color_map' }, // 翻译
-      { header: t('field.key_features_1'), dataKey: 'key_features_1' }, // 翻译
-      { header: t('field.key_features_2'), dataKey: 'key_features_2' }, // 翻译
-      { header: t('field.key_features_3'), dataKey: 'key_features_3' }, // 翻译
-      { header: t('field.key_features_4'), dataKey: 'key_features_4' }, // 翻译
-      { header: t('field.key_features_5'), dataKey: 'key_features_5' }, // 翻译
-      { header: t('field.main_image'), dataKey: 'main_image' }, // 翻译
-      { header: t('field.front_image'), dataKey: 'front_image' }, // 翻译
-      { header: t('field.back_image'), dataKey: 'back_image' }, // 翻译
-      { header: t('field.side_image'), dataKey: 'side_image' }, // 翻译
-      { header: t('field.detail_image'), dataKey: 'detail_image' }, // 翻译
-      { header: t('field.full_image'), dataKey: 'full_image' }, // 翻译
-      { header: t('field.thumbnail_image'), dataKey: 'thumbnail_image' }, // 翻译
-      { header: t('field.size_chart_image'), dataKey: 'size_chart_image' }, // 翻译
-      { header: t('field.swatch_image'), dataKey: 'swatch_image' }, // 翻译
-      { header: t('field.additional_image_1'), dataKey: 'additional_image_1' }, // 翻译
-      { header: t('field.additional_image_2'), dataKey: 'additional_image_2' }, // 翻译
-      { header: t('field.additional_image_3'), dataKey: 'additional_image_3' }, // 翻译
-      { header: t('field.main_video'), dataKey: 'main_video' }, // 翻译
-      { header: t('field.additional_video_1'), dataKey: 'additional_video_1' }, // 翻译
-      { header: t('field.material_name_1'), dataKey: 'material_name_1' }, // 翻译
-      { header: t('field.material_1_percentage'), dataKey: 'material_1_percentage' }, // 翻译
-      { header: t('field.material_name_2'), dataKey: 'material_name_2' }, // 翻译
-      { header: t('field.material_2_percentage'), dataKey: 'material_2_percentage' }, // 翻译
-      { header: t('field.material_name_3'), dataKey: 'material_name_3' }, // 翻译
-      { header: t('field.material_3_percentage'), dataKey: 'material_3_percentage' }, // 翻译
-      { header: t('field.material_name_4'), dataKey: 'material_name_4' }, // 翻译
-      { header: t('field.material_4_percentage'), dataKey: 'material_4_percentage' }, // 翻译
-      { header: t('field.material_name_5'), dataKey: 'material_name_5' }, // 翻译
-      { header: t('field.material_5_percentage'), dataKey: 'material_5_percentage' }, // 翻译
-      { header: t('field.additional_color_1'), dataKey: 'additional_color_1' }, // 翻译
-      { header: t('field.additional_color_2'), dataKey: 'additional_color_2' }, // 翻译
+      { header: t('field.vendor_sku'), dataKey: 'vendor_sku' },
+      { header: t('field.UPC'), dataKey: 'UPC' },
+      { header: t('field.product_en_name'), dataKey: 'product_en_name' },
+      { header: t('field.product_cn_name'), dataKey: 'product_cn_name' },
+      { header: t('field.status'), dataKey: 'status', type: 'status' },
+      { header: t('field.ATS'), dataKey: 'ATS' },
+      { header: t('field.dropship_price'), dataKey: 'dropship_price' },
+      { header: t('field.MSRP'), dataKey: 'MSRP' },
+      { header: t('field.HDL_for_shipping'), dataKey: 'HDL_for_shipping' },
+      { header: t('field.HDL_for_receiving'), dataKey: 'HDL_for_receiving' },
+      { header: t('field.HDL_for_returning'), dataKey: 'HDL_for_returning' },
+      { header: t('field.storage_monthly'), dataKey: 'storage_monthly' },
+      { header: t('field.allow_dropship_return'), dataKey: 'allow_dropship_return', type: 'booleanToLabel' },
+      { header: t('field.shipping_lead_time'), dataKey: 'shipping_lead_time' },
+      { header: t('field.division'), dataKey: 'division' },
+      { header: t('field.department'), dataKey: 'department' },
+      { header: t('field.category'), dataKey: 'category' },
+      { header: t('field.sub_category'), dataKey: 'sub_category' },
+      { header: t('field.product_class'), dataKey: 'product_class' },
+      { header: t('field.group'), dataKey: 'group' },
+      { header: t('field.subgroup'), dataKey: 'subgroup' },
+      { header: t('field.style'), dataKey: 'style' },
+      { header: t('field.sub_style'), dataKey: 'sub_style' },
+      { header: t('field.brand'), dataKey: 'brand' },
+      { header: t('field.model'), dataKey: 'model' },
+      { header: t('field.color'), dataKey: 'color' },
+      { header: t('field.size'), dataKey: 'size' },
+      { header: t('field.option_1'), dataKey: 'option_1' },
+      { header: t('field.option_2'), dataKey: 'option_2' },
+      { header: t('field.option_3'), dataKey: 'option_3' },
+      { header: t('field.option_4'), dataKey: 'option_4' },
+      { header: t('field.option_5'), dataKey: 'option_5' },
+      { header: t('field.gender'), dataKey: 'gender' },
+      { header: t('field.age_group'), dataKey: 'age_group' },
+      { header: t('field.country_of_region'), dataKey: 'country_of_region' },
+      { header: t('field.color_code_NRF'), dataKey: 'color_code_NRF' },
+      { header: t('field.color_desc'), dataKey: 'color_desc' },
+      { header: t('field.size_code_NRF'), dataKey: 'size_code_NRF' },
+      { header: t('field.size_desc'), dataKey: 'size_desc' },
+      { header: t('field.manufacturer'), dataKey: 'manufacturer' },
+      { header: t('field.OEM'), dataKey: 'OEM' },
+      { header: t('field.product_year'), dataKey: 'product_year' },
+      { header: t('field.condition'), dataKey: 'condition', type: 'condition' },
+      { header: t('field.prepack_code'), dataKey: 'prepack_code' },
+      { header: t('field.remark'), dataKey: 'remark' },
+      { header: t('field.harmonized_code'), dataKey: 'harmonized_code' },
+      { header: t('field.UOM'), dataKey: 'UOM' },
+      { header: t('field.net_weight'), dataKey: 'net_weight' },
+      { header: t('field.gross_weight'), dataKey: 'gross_weight' },
+      { header: t('field.product_height'), dataKey: 'product_height' },
+      { header: t('field.product_length'), dataKey: 'product_length' },
+      { header: t('field.product_width'), dataKey: 'product_width' },
+      { header: t('field.box_height'), dataKey: 'box_height' },
+      { header: t('field.box_length'), dataKey: 'box_length' },
+      { header: t('field.box_width'), dataKey: 'box_width' },
+      { header: t('field.qty_case'), dataKey: 'qty_case' },
+      { header: t('field.qty_box'), dataKey: 'qty_box' },
+      { header: t('field.material_content'), dataKey: 'material_content' },
+      { header: t('field.tag'), dataKey: 'tag' },
+      { header: t('field.care_instructions'), dataKey: 'care_instructions' },
+      { header: t('field.ship_from'), dataKey: 'ship_from' },
+      { header: t('field.ship_to'), dataKey: 'ship_to' },
+      { header: t('field.ship_carrier'), dataKey: 'ship_carrier' },
+      { header: t('field.ship_desc'), dataKey: 'ship_desc' },
+      { header: t('field.return_policy'), dataKey: 'return_policy' },
+      { header: t('field.security_privacy'), dataKey: 'security_privacy' },
+      { header: t('field.dropship_desc'), dataKey: 'dropship_desc' },
+      { header: t('field.title'), dataKey: 'title' },
+      { header: t('field.short_desc'), dataKey: 'short_desc' },
+      { header: t('field.long_desc'), dataKey: 'long_desc' },
+      { header: t('field.dropship_listing_title'), dataKey: 'dropship_listing_title' },
+      { header: t('field.dropship_short_desc'), dataKey: 'dropship_short_desc' },
+      { header: t('field.dropship_long_desc'), dataKey: 'dropship_long_desc' },
+      { header: t('field.keywords'), dataKey: 'keywords' },
+      { header: t('field.google_product_category'), dataKey: 'google_product_category' },
+      { header: t('field.google_product_type'), dataKey: 'google_product_type' },
+      { header: t('field.facebook_product_category'), dataKey: 'facebook_product_category' },
+      { header: t('field.color_map'), dataKey: 'color_map' },
+      { header: t('field.key_features_1'), dataKey: 'key_features_1' },
+      { header: t('field.key_features_2'), dataKey: 'key_features_2' },
+      { header: t('field.key_features_3'), dataKey: 'key_features_3' },
+      { header: t('field.key_features_4'), dataKey: 'key_features_4' },
+      { header: t('field.key_features_5'), dataKey: 'key_features_5' },
+      { header: t('field.main_image'), dataKey: 'main_image' },
+      { header: t('field.front_image'), dataKey: 'front_image' },
+      { header: t('field.back_image'), dataKey: 'back_image' },
+      { header: t('field.side_image'), dataKey: 'side_image' },
+      { header: t('field.detail_image'), dataKey: 'detail_image' },
+      { header: t('field.full_image'), dataKey: 'full_image' },
+      { header: t('field.thumbnail_image'), dataKey: 'thumbnail_image' },
+      { header: t('field.size_chart_image'), dataKey: 'size_chart_image' },
+      { header: t('field.swatch_image'), dataKey: 'swatch_image' },
+      { header: t('field.additional_image_1'), dataKey: 'additional_image_1' },
+      { header: t('field.additional_image_2'), dataKey: 'additional_image_2' },
+      { header: t('field.additional_image_3'), dataKey: 'additional_image_3' },
+      { header: t('field.main_video'), dataKey: 'main_video' },
+      { header: t('field.additional_video_1'), dataKey: 'additional_video_1' },
+      { header: t('field.material_name_1'), dataKey: 'material_name_1' },
+      { header: t('field.material_1_percentage'), dataKey: 'material_1_percentage' },
+      { header: t('field.material_name_2'), dataKey: 'material_name_2' },
+      { header: t('field.material_2_percentage'), dataKey: 'material_2_percentage' },
+      { header: t('field.material_name_3'), dataKey: 'material_name_3' },
+      { header: t('field.material_3_percentage'), dataKey: 'material_3_percentage' },
+      { header: t('field.material_name_4'), dataKey: 'material_name_4' },
+      { header: t('field.material_4_percentage'), dataKey: 'material_4_percentage' },
+      { header: t('field.material_name_5'), dataKey: 'material_name_5' },
+      { header: t('field.material_5_percentage'), dataKey: 'material_5_percentage' },
+      { header: t('field.additional_color_1'), dataKey: 'additional_color_1' },
+      { header: t('field.additional_color_2'), dataKey: 'additional_color_2' },
     ];
 
     const dataToExport = selectedRowKeys.length > 0
@@ -608,7 +604,7 @@ const App = () => {
       : dataSource;
 
     if (dataToExport.length === 0) {
-      message.warning(t('messages.noDataToExport')); // 翻译
+      message.warning(t('messages.noDataToExport'));
       return;
     }
 
@@ -628,9 +624,9 @@ const App = () => {
         } else if (field.type === 'booleanToLabel') {
           const valStr = String(sku[field.dataKey]).toLowerCase();
           if (valStr === 'true') {
-              value = 'Yes'; // 保持英文，因为 Excel 通常不需要翻译
+              value = 'Yes';
           } else if (valStr === 'false') {
-              value = 'No'; // 保持英文
+              value = 'No';
           } else {
               value = sku[field.dataKey];
           }
@@ -647,7 +643,7 @@ const App = () => {
     const now = new Date();
     const timestamp = `${now.getFullYear().toString().slice(-2)}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}${now.getSeconds().toString().padStart(2, '0')}`;
     XLSX.writeFile(workbook, `skus_${timestamp}.xlsx`);
-    message.success(t('messages.skuExported')); // 翻译
+    message.success(t('messages.skuExported'));
   };
 
   const handleCsvUpload = async (options) => {
@@ -657,24 +653,24 @@ const App = () => {
     try {
       const response = await uploadSkuCsv(file);
       onSuccess(response, file);
-      message.success(t('messages.csvUploadSuccess', { fileName: file.name })); // 翻译
+      message.success(t('messages.csvUploadSuccess', { fileName: file.name }));
       fetchSkusWithHandling();
     } catch (error) {
       console.error("CSV Upload failed:", error);
-      let errorMessage = `${t('messages.csvUploadFailed', { fileName: file.name })}`; // 翻译
+      let errorMessage = `${t('messages.csvUploadFailed', { fileName: file.name })}`;
       if (error.fieldErrors && Array.isArray(error.fieldErrors)) {
         const detailedErrors = error.fieldErrors.map(fe => {
-          const fieldName = fe.loc && fe.loc.length > 1 ? fe.loc[fe.loc.length -1] : t('messages.unknownField'); // 翻译
+          const fieldName = fe.loc && fe.loc.length > 1 ? fe.loc[fe.loc.length -1] : t('messages.unknownField');
           return `${fieldName}: ${fe.msg}`;
         }).join('; ');
-        errorMessage += `${t('messages.validationErrors')}${detailedErrors}`; // 翻译
-         setErrorMessages(prev => [...prev, `${t('messages.validationErrorsInFile', { fileName: file.name })}: ${detailedErrors}`]); // 翻译
+        errorMessage += `${t('messages.validationErrors')}${detailedErrors}`;
+         setErrorMessages(prev => [...prev, `${t('messages.validationErrorsInFile', { fileName: file.name })}: ${detailedErrors}`]);
       } else if (error.message) {
         errorMessage += error.message;
-         setErrorMessages(prev => [...prev, `${t('messages.uploadError', { fileName: file.name })}: ${error.message}`]); // 翻译
+         setErrorMessages(prev => [...prev, `${t('messages.uploadError', { fileName: file.name })}: ${error.message}`]);
       } else {
-        errorMessage += t('messages.unknownUploadError', { fileName: file.name }); // 翻译
-        setErrorMessages(prev => [...prev, `${t('messages.unknownUploadError', { fileName: file.name })}`]); // 翻译
+        errorMessage += t('messages.unknownUploadError', { fileName: file.name });
+        setErrorMessages(prev => [...prev, `${t('messages.unknownUploadError', { fileName: file.name })}`]);
       }
       onError(error);
       message.error(errorMessage, 10);
@@ -703,12 +699,12 @@ const App = () => {
   }
 
   return (
-    <ConfigProvider locale={antdLocales[i18n.language]}> {/* 根据当前语言动态设置 Ant Design Locale */}
+    <ConfigProvider locale={antdLocales[i18n.language]}>
       <div className="App">
         <div className="header-container">
             <div className="logo-title-container">
                 <img src={JFJPLogo} alt="JFJP Logo" className="header-logo" />
-                <h1 className="header-title">{t('systemTitle')}</h1> {/* 翻译 */}
+                <h1 className="header-title">{t('systemTitle')}</h1>
             </div>
             <div className="header-right">
                 {/* 语言切换按钮 */}
@@ -717,10 +713,10 @@ const App = () => {
                         onClick={toggleLanguage}
                         size="small"
                     >
-                        {i18n.language === 'en' ? '中文' : 'EN'} {/* 根据当前语言显示不同的文本 */}
+                        {i18n.language === 'en' ? '中文' : 'EN'}
                     </Button>
                 </Space>
-                <Button onClick={handleLogout} type="default">{t('logout')}</Button> {/* 翻译 */}
+                <Button onClick={handleLogout} type="default">{t('logout')}</Button>
             </div>
         </div>
 
@@ -743,7 +739,7 @@ const App = () => {
         <div className="table-actions-container">
             <Space className="table-top-buttons">
                 <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingSku(null); setIsModalOpen(true); }}>
-                    {t('createSkuModal')} {/* 翻译 */}
+                    {t('createSkuModal')}
                 </Button>
                 <Upload
                     ref={fileInputRef}
@@ -751,21 +747,22 @@ const App = () => {
                     showUploadList={false}
                     accept=".csv"
                 >
-                    <Button icon={<UploadOutlined />}>{t('uploadCsv')}</Button> {/* 翻译 */}
+                    <Button icon={<UploadOutlined />}>{t('uploadCsv')}</Button>
                 </Upload>
                 <Button icon={<ExportOutlined />} onClick={handleExport}>
-                    {t('exportAll')} {/* 翻译 */}
+                    {t('exportAll')}
                 </Button>
+                {/* 将搜索框放到这里 */}
+                <div className="search-bar-container">
+                    <Input
+                        prefix={<SearchOutlined />}
+                        placeholder={t('searchPlaceholder')}
+                        value={searchText}
+                        onChange={e => setSearchText(e.target.value)}
+                        style={{ width: 300 }}
+                    />
+                </div>
             </Space>
-            <div className="search-bar-container">
-                <Input
-                    prefix={<SearchOutlined />}
-                    placeholder={t('searchPlaceholder')}
-                    value={searchText}
-                    onChange={e => setSearchText(e.target.value)}
-                    style={{ width: 300 }}
-                />
-            </div>
         </div>
 
         <Form form={form} component={false} onValuesChange={handleInlineFormValuesChange}>
@@ -787,12 +784,12 @@ const App = () => {
                 pageSizeOptions: ['15', '20', '50', '100', '200'],
                 showSizeChanger: true,
                 defaultPageSize: 15,
-                showTotal: (total, range) => `${range[0]}-${range[1]} / ${total} ${t('common.records')}`, // 翻译
+                showTotal: (total, range) => `${range[0]}-${range[1]} / ${total} ${t('common.records')}`,
               }}
             footer={() => (
               <div style={{ textAlign: 'center' }}>
                 <Button type="default" icon={<PlusOutlined />} onClick={handleAddInline}>
-                  {t('tableFooterAddInline')} {/* 翻译 */}
+                  {t('tableFooterAddInline')}
                 </Button>
               </div>
             )}

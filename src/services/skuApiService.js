@@ -1,8 +1,8 @@
 // src/services/skuApiService.js
 
-const API_BASE_URL = 'https://ebay-oauth.onrender.com/JFJP/skus';
-const AUTH_API_BASE_URL = 'https://ebay-oauth.onrender.com/JFJP/auth'; // 新增认证服务的根 URL
-const AI_API_BASE_URL = 'https://ebay-oauth.onrender.com/JFJP';
+const API_BASE_URL = 'https://vp.jfj.ai/JFJP/skus';
+const AUTH_API_BASE_URL = 'https://vp.jfj.ai/JFJP/auth'; // 新增认证服务的根 URL
+const AI_API_BASE_URL = 'https://vp.jfj.ai/JFJP';
 
 // 辅助函数处理 API 响应
 const handleResponse = async (response) => {
