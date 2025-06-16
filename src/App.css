@@ -1,8 +1,9 @@
 #root {
-  max-width: 90vw;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  /* max-width: 90vw; /* 移除或调整以适应更宽布局 */
+  margin: 0 auto; /* 保持水平居中，但内容本身左对齐 */
+  padding: 0; /* 移除根级的 padding，让 App 组件自己控制 */
+  text-align: left; /* 调整为左对齐 */
+  min-width: 1000px; /* 确保最小宽度以适应表格 */
 }
 
 .logo {
@@ -42,7 +43,133 @@
 }
 
 .App {
-  /* background-color: #f5f5f5; */ /* 移除了这一行，背景由 body 提供 */
-  padding: 10px;
+  background-color: #f5f5f5; /* 沿用 body 的背景色 */
+  padding: 20px 40px; /* 增加整体内边距，让内容不至于紧贴边缘 */
   min-height: 100vh;
+  box-sizing: border-box; /* 确保 padding 不会增加总宽度 */
+}
+
+/* Header 样式 */
+.header-container {
+  display: flex;
+  justify-content: space-between; /* 左右两边对齐 */
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #f0f0f0; /* 添加底部边框，模仿图片中的分隔线 */
+}
+
+.logo-title-container {
+  display: flex;
+  align-items: center;
+}
+
+.header-logo {
+  height: 40px; /* 调整 Logo 大小以匹配图片 */
+  margin-right: 10px;
+}
+
+.header-title {
+  color: #333; /* 调整标题颜色 */
+  margin: 0;
+  font-size: 24px; /* 调整标题字体大小 */
+  font-weight: 500;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 15px; /* 语言选择和退出登录按钮之间的间距 */
+}
+
+.language-selector {
+    color: #666;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+/* 表格上方操作区域 */
+.table-actions-container {
+  display: flex;
+  justify-content: space-between; /* 按钮组和搜索框左右对齐 */
+  align-items: center;
+  margin-bottom: 16px;
+  background-color: #fff; /* 操作区背景色 */
+  padding: 16px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); /* 添加一些阴影效果 */
+}
+
+.table-top-buttons .ant-btn {
+  height: 32px; /* 统一按钮高度 */
+  line-height: 32px;
+  padding: 0 15px;
+  font-size: 14px;
+}
+
+/* 搜索框样式 */
+.search-bar-container .ant-input-affix-wrapper {
+  border-radius: 4px;
+  height: 32px;
+}
+
+.search-bar-container .ant-input-prefix .anticon {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+/* Ant Design Table 的一些默认样式可能需要微调 */
+.ant-table-wrapper {
+    margin-top: 20px; /* 表格与上方操作区之间的间距 */
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* 表格头部样式 */
+.ant-table-thead > tr > th {
+  background-color: #fafafa; /* 表格头部背景色 */
+  color: rgba(0, 0, 0, 0.85);
+  font-weight: 500;
+  white-space: nowrap; /* 确保标题不换行 */
+}
+
+/* 表格内容行样式 */
+.ant-table-tbody > tr > td {
+  white-space: nowrap; /* 确保表格内容不换行 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 分页器样式 */
+.ant-pagination {
+    margin-top: 16px; /* 分页器与表格之间的间距 */
+    text-align: right; /* 图片中分页器在右侧 */
+}
+
+.ant-pagination-options {
+  margin-left: 10px; /* 调整分页器选项间距 */
+}
+
+/* 错误提示 */
+.ant-alert-error {
+  background-color: #fff0f6; /* 更柔和的错误背景色 */
+  border-color: #ffadd2;
+  color: #ff4d4f;
+}
+
+/* Modal 内部的样式调整 */
+.ant-modal-body .ant-form-item-label > label {
+  font-weight: 500; /* 模态框中表单项的标签加粗 */
+}
+
+/* 确保 EditableCell 内部的 Form.Item 不带额外边距 */
+.ant-table-tbody .ant-form-item {
+  margin-bottom: 0 !important;
+}
+
+/* 确保 EditableCell 内部的 Input, Select 等填充父元素 */
+.ant-table-tbody .ant-input,
+.ant-table-tbody .ant-input-number,
+.ant-table-tbody .ant-select {
+  width: 100% !important;
 }
