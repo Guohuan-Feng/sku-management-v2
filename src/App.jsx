@@ -1,11 +1,11 @@
 // src/App.jsx
 import { useState, useEffect, useRef } from 'react';
 import './App.css';
-import { Table, ConfigProvider, Button, message, Upload, Space, Popconfirm, Alert, Form, Input } from 'antd'; // 引入 Input 用于搜索框
+import { Table, ConfigProvider, Button, message, Upload, Space, Popconfirm, Alert, Form, Input } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import * as XLSX from 'xlsx';
 import { fieldsConfig, statusOptions, conditionOptions } from './components/fieldConfig';
-import { UploadOutlined, EditOutlined, DeleteOutlined, PlusOutlined, ExportOutlined, SaveOutlined, CloseOutlined, EyeOutlined, SearchOutlined } from '@ant-design/icons'; // 引入 SearchOutlined
+import { UploadOutlined, EditOutlined, DeleteOutlined, PlusOutlined, ExportOutlined, SaveOutlined, CloseOutlined, EyeOutlined, SearchOutlined } from '@ant-design/icons';
 import SkuFormModal from './components/SkuFormModal';
 import EditableCell from './components/EditableCell';
 import { getAllSkus, createSku, updateSku, deleteSku, uploadSkuCsv } from './services/skuApiService';
@@ -30,7 +30,7 @@ const App = () => {
 
   const [isViewAllModalOpen, setIsViewAllModalOpen] = useState(false);
   const [viewingSku, setViewingSku] = useState(null);
-  const [searchText, setSearchText] = useState(''); // 新增搜索文本状态
+  const [searchText, setSearchText] = useState('');
 
   // 新增登录状态
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -40,7 +40,7 @@ const App = () => {
     const token = localStorage.getItem('access_token');
     if (token) {
       setIsLoggedIn(true);
-      fetchSkusWithHandling(); // 如果已登录，则加载 SKU 数据
+      fetchSkusWithHandling();
     }
   }, []);
 
@@ -67,13 +67,13 @@ const App = () => {
 
   const handleAuthSuccess = () => {
     setIsLoggedIn(true);
-    fetchSkusWithHandling(); // 登录成功后加载数据
+    fetchSkusWithHandling();
   };
 
   const handleLogout = () => {
     localStorage.removeItem('access_token');
     setIsLoggedIn(false);
-    setDataSource([]); // 清空数据
+    setDataSource([]);
     message.info('您已退出登录。');
   };
 
@@ -196,7 +196,7 @@ const App = () => {
           width: field.name === 'vendor_sku' ? 180 : (field.type === 'textarea' || field.name.toLowerCase().includes('desc') ? 250 : 150),
           fixed: field.name === 'vendor_sku' ? 'left' : undefined,
           ellipsis: true,
-          render: (text, record) => { // 添加 render 方法来处理可编辑单元格的显示
+          render: (text, record) => {
             const editable = isEditing(record);
             return editable ? (
               <EditableCell
@@ -212,7 +212,7 @@ const App = () => {
               text
             );
           },
-          onCell: (record) => ({ // onCell 用于传递 props 给 EditableCell
+          onCell: (record) => ({
             record,
             inputType: field.type,
             dataIndex: field.name,
@@ -479,115 +479,115 @@ const App = () => {
   const handleExport = () => {
     // These fields and their order are derived from your src/components/108.txt and src/components/requirefiled.txt, combined for a comprehensive export.
     const exportFieldsOrder = [
-      { header: 'Vendor SKU', dataKey: 'vendor_sku' }, //
-      { header: 'UPC', dataKey: 'UPC' }, //
-      { header: 'Product EN Name', dataKey: 'product_en_name' }, //
-      { header: 'Product CN Name', dataKey: 'product_cn_name' }, //
-      { header: 'Status', dataKey: 'status', type: 'status' }, //
-      { header: 'ATS', dataKey: 'ATS' }, //
-      { header: 'Dropship Price', dataKey: 'dropship_price' }, //
-      { header: 'MSRP$', dataKey: 'MSRP' }, //
-      { header: '$ HDL for Shipping', dataKey: 'HDL_for_shipping' }, //
-      { header: '$ HDL for Receiving', dataKey: 'HDL_for_receiving' }, //
-      { header: '$ HDL for Returning', dataKey: 'HDL_for_returning' }, //
-      { header: '$ Storage Monthly', dataKey: 'storage_monthly' }, //
-      { header: 'Allow Dropship Return', dataKey: 'allow_dropship_return', type: 'booleanToLabel' }, //
-      { header: 'Shipping Lead Time', dataKey: 'shipping_lead_time' }, //
-      { header: 'Division', dataKey: 'division' }, //
-      { header: 'Department', dataKey: 'department' }, //
-      { header: 'Category', dataKey: 'category' }, //
-      { header: 'Subcategory', dataKey: 'sub_category' }, //
-      { header: 'Class', dataKey: 'product_class' }, //
-      { header: 'Group', dataKey: 'group' }, //
-      { header: 'Subgroup', dataKey: 'subgroup' }, //
-      { header: 'Style', dataKey: 'style' }, //
-      { header: 'Substyle', dataKey: 'sub_style' }, //
-      { header: 'Brand', dataKey: 'brand' }, //
-      { header: 'Model', dataKey: 'model' }, //
-      { header: 'Color', dataKey: 'color' }, //
-      { header: 'Size', dataKey: 'size' }, //
-      { header: 'OptionName1', dataKey: 'option_1' }, //
-      { header: 'OptionName2', dataKey: 'option_2' }, //
-      { header: 'OptionName3', dataKey: 'option_3' }, //
-      { header: 'OptionName4', dataKey: 'option_4' }, //
-      { header: 'OptionName5', dataKey: 'option_5' }, //
-      { header: 'Gender', dataKey: 'gender' }, //
-      { header: 'Age Group', dataKey: 'age_group' }, //
-      { header: 'Country Of Origin', dataKey: 'country_of_region' }, //
-      { header: 'Color Code NRF', dataKey: 'color_code_NRF' }, //
-      { header: 'Color Desc', dataKey: 'color_desc' }, //
-      { header: 'Size Code NRF', dataKey: 'size_code_NRF' }, //
-      { header: 'Size Desc', dataKey: 'size_desc' }, //
-      { header: 'Manufacturer', dataKey: 'manufacturer' }, //
-      { header: 'OEM', dataKey: 'OEM' }, //
-      { header: 'Product Year', dataKey: 'product_year' }, //
-      { header: 'Condition', dataKey: 'condition', type: 'condition' }, //
-      { header: 'Prepack #', dataKey: 'prepack_code' }, //
-      { header: 'Remark', dataKey: 'remark' }, //
-      { header: 'Harmonized #', dataKey: 'harmonized_code' }, //
-      { header: 'UOM', dataKey: 'UOM' }, //
-      { header: 'Net Weight', dataKey: 'net_weight' }, //
-      { header: 'Gross Weight', dataKey: 'gross_weight' }, //
-      { header: 'Product Height', dataKey: 'product_height' }, //
-      { header: 'Product Length', dataKey: 'product_length' }, //
-      { header: 'Product Width', dataKey: 'product_width' }, //
-      { header: 'Box Height', dataKey: 'box_height' }, //
-      { header: 'Box Length', dataKey: 'box_length' }, //
-      { header: 'Box Width', dataKey: 'box_width' }, //
-      { header: 'Qty/Case', dataKey: 'qty_case' }, //
-      { header: 'Qty/Box', dataKey: 'qty_box' }, //
-      { header: 'Material Content', dataKey: 'material_content' }, //
-      { header: 'Tags', dataKey: 'tag' }, //
-      { header: 'Care Instructions', dataKey: 'care_instructions' }, //
-      { header: 'Ship From', dataKey: 'ship_from' }, //
-      { header: 'Ship To', dataKey: 'ship_to' }, //
-      { header: 'Ship Carrier', dataKey: 'ship_carrier' }, //
-      { header: 'Shipping Description', dataKey: 'ship_desc' }, //
-      { header: 'Return Policy', dataKey: 'return_policy' }, //
-      { header: 'Security Privacy', dataKey: 'security_privacy' }, //
-      { header: 'Dropship Description', dataKey: 'dropship_desc' }, //
-      { header: 'Title', dataKey: 'title' }, //
-      { header: 'Short Description', dataKey: 'short_desc' }, //
-      { header: 'Long Description', dataKey: 'long_desc' }, //
-      { header: 'Dropship Listing Title', dataKey: 'dropship_listing_title' }, //
-      { header: 'Dropship Short Description', dataKey: 'dropship_short_desc' }, //
-      { header: 'Dropship Long Description', dataKey: 'dropship_long_desc' }, //
-      { header: 'Keywords', dataKey: 'keywords' }, //
-      { header: 'Google Product Category', dataKey: 'google_product_category' }, //
-      { header: 'Google Product Type', dataKey: 'google_product_type' }, //
-      { header: 'Facebook Product Category', dataKey: 'facebook_product_category' }, //
-      { header: 'Color Map', dataKey: 'color_map' }, //
-      { header: 'Key Features 1', dataKey: 'key_features_1' }, //
-      { header: 'Key Features 2', dataKey: 'key_features_2' }, //
-      { header: 'Key Features 3', dataKey: 'key_features_3' }, //
-      { header: 'Key Features 4', dataKey: 'key_features_4' }, //
-      { header: 'Key Features 5', dataKey: 'key_features_5' }, //
-      { header: 'Main Image', dataKey: 'main_image' }, //
-      { header: 'Front Image', dataKey: 'front_image' }, //
-      { header: 'Back Image', dataKey: 'back_image' }, //
-      { header: 'Side Image', dataKey: 'side_image' }, //
-      { header: 'Detail Image', dataKey: 'detail_image' }, //
-      { header: 'Full Image', dataKey: 'full_image' }, //
-      { header: 'Thumbnail Image', dataKey: 'thumbnail_image' }, //
-      { header: 'Size Chart Image', dataKey: 'size_chart_image' }, //
-      { header: 'Swatch Image', dataKey: 'swatch_image' }, //
-      { header: 'Additional Image 1', dataKey: 'additional_image_1' }, //
-      { header: 'Additional Image 2', dataKey: 'additional_image_2' }, //
-      { header: 'Additional Image 3', dataKey: 'additional_image_3' }, //
-      { header: 'Main Video', dataKey: 'main_video' }, //
-      { header: 'Additional Video 1', dataKey: 'additional_video_1' }, //
-      { header: 'Material 1 Name', dataKey: 'material_name_1' }, //
-      { header: 'Material 1 Percentage', dataKey: 'material_1_percentage' }, //
-      { header: 'Material 2 Name', dataKey: 'material_name_2' }, //
-      { header: 'Material 2 Percentage', dataKey: 'material_2_percentage' }, //
-      { header: 'Material 3 Name', dataKey: 'material_name_3' }, //
-      { header: 'Material 3 Percentage', dataKey: 'material_3_percentage' }, //
-      { header: 'Material 4 Name', dataKey: 'material_name_4' }, //
-      { header: 'Material 4 Percentage', dataKey: 'material_4_percentage' }, //
-      { header: 'Material 5 Name', dataKey: 'material_name_5' }, //
-      { header: 'Material 5 Percentage', dataKey: 'material_5_percentage' }, //
-      { header: 'Additional Color 1', dataKey: 'additional_color_1' }, //
-      { header: 'Additional Color 2', dataKey: 'additional_color_2' }, //
+      { header: 'Vendor SKU', dataKey: 'vendor_sku' },
+      { header: 'UPC', dataKey: 'UPC' },
+      { header: 'Product EN Name', dataKey: 'product_en_name' },
+      { header: 'Product CN Name', dataKey: 'product_cn_name' },
+      { header: 'Status', dataKey: 'status', type: 'status' },
+      { header: 'ATS', dataKey: 'ATS' },
+      { header: 'Dropship Price', dataKey: 'dropship_price' },
+      { header: 'MSRP$', dataKey: 'MSRP' },
+      { header: '$ HDL for Shipping', dataKey: 'HDL_for_shipping' },
+      { header: '$ HDL for Receiving', dataKey: 'HDL_for_receiving' },
+      { header: '$ HDL for Returning', dataKey: 'HDL_for_returning' },
+      { header: '$ Storage Monthly', dataKey: 'storage_monthly' },
+      { header: 'Allow Dropship Return', dataKey: 'allow_dropship_return', type: 'booleanToLabel' },
+      { header: 'Shipping Lead Time', dataKey: 'shipping_lead_time' },
+      { header: 'Division', dataKey: 'division' },
+      { header: 'Department', dataKey: 'department' },
+      { header: 'Category', dataKey: 'category' },
+      { header: 'Subcategory', dataKey: 'sub_category' },
+      { header: 'Class', dataKey: 'product_class' },
+      { header: 'Group', dataKey: 'group' },
+      { header: 'Subgroup', dataKey: 'subgroup' },
+      { header: 'Style', dataKey: 'style' },
+      { header: 'Substyle', dataKey: 'sub_style' },
+      { header: 'Brand', dataKey: 'brand' },
+      { header: 'Model', dataKey: 'model' },
+      { header: 'Color', dataKey: 'color' },
+      { header: 'Size', dataKey: 'size' },
+      { header: 'OptionName1', dataKey: 'option_1' },
+      { header: 'OptionName2', dataKey: 'option_2' },
+      { header: 'OptionName3', dataKey: 'option_3' },
+      { header: 'OptionName4', dataKey: 'option_4' },
+      { header: 'OptionName5', dataKey: 'option_5' },
+      { header: 'Gender', dataKey: 'gender' },
+      { header: 'Age Group', dataKey: 'age_group' },
+      { header: 'Country Of Origin', dataKey: 'country_of_region' },
+      { header: 'Color Code NRF', dataKey: 'color_code_NRF' },
+      { header: 'Color Desc', dataKey: 'color_desc' },
+      { header: 'Size Code NRF', dataKey: 'size_code_NRF' },
+      { header: 'Size Desc', dataKey: 'size_desc' },
+      { header: 'Manufacturer', dataKey: 'manufacturer' },
+      { header: 'OEM', dataKey: 'OEM' },
+      { header: 'Product Year', dataKey: 'product_year' },
+      { header: 'Condition', dataKey: 'condition', type: 'condition' },
+      { header: 'Prepack #', dataKey: 'prepack_code' },
+      { header: 'Remark', dataKey: 'remark' },
+      { header: 'Harmonized #', dataKey: 'harmonized_code' },
+      { header: 'UOM', dataKey: 'UOM' },
+      { header: 'Net Weight', dataKey: 'net_weight' },
+      { header: 'Gross Weight', dataKey: 'gross_weight' },
+      { header: 'Product Height', dataKey: 'product_height' },
+      { header: 'Product Length', dataKey: 'product_length' },
+      { header: 'Product Width', dataKey: 'product_width' },
+      { header: 'Box Height', dataKey: 'box_height' },
+      { header: 'Box Length', dataKey: 'box_length' },
+      { header: 'Box Width', dataKey: 'box_width' },
+      { header: 'Qty/Case', dataKey: 'qty_case' },
+      { header: 'Qty/Box', dataKey: 'qty_box' },
+      { header: 'Material Content', dataKey: 'material_content' },
+      { header: 'Tags', dataKey: 'tag' },
+      { header: 'Care Instructions', dataKey: 'care_instructions' },
+      { header: 'Ship From', dataKey: 'ship_from' },
+      { header: 'Ship To', dataKey: 'ship_to' },
+      { header: 'Ship Carrier', dataKey: 'ship_carrier' },
+      { header: 'Shipping Description', dataKey: 'ship_desc' },
+      { header: 'Return Policy', dataKey: 'return_policy' },
+      { header: 'Security Privacy', dataKey: 'security_privacy' },
+      { header: 'Dropship Description', dataKey: 'dropship_desc' },
+      { header: 'Title', dataKey: 'title' },
+      { header: 'Short Description', dataKey: 'short_desc' },
+      { header: 'Long Description', dataKey: 'long_desc' },
+      { header: 'Dropship Listing Title', dataKey: 'dropship_listing_title' },
+      { header: 'Dropship Short Description', dataKey: 'dropship_short_desc' },
+      { header: 'Dropship Long Description', dataKey: 'dropship_long_desc' },
+      { header: 'Keywords', dataKey: 'keywords' },
+      { header: 'Google Product Category', dataKey: 'google_product_category' },
+      { header: 'Google Product Type', dataKey: 'google_product_type' },
+      { header: 'Facebook Product Category', dataKey: 'facebook_product_category' },
+      { header: 'Color Map', dataKey: 'color_map' },
+      { header: 'Key Features 1', dataKey: 'key_features_1' },
+      { header: 'Key Features 2', dataKey: 'key_features_2' },
+      { header: 'Key Features 3', dataKey: 'key_features_3' },
+      { header: 'Key Features 4', dataKey: 'key_features_4' },
+      { header: 'Key Features 5', dataKey: 'key_features_5' },
+      { header: 'Main Image', dataKey: 'main_image' },
+      { header: 'Front Image', dataKey: 'front_image' },
+      { header: 'Back Image', dataKey: 'back_image' },
+      { header: 'Side Image', dataKey: 'side_image' },
+      { header: 'Detail Image', dataKey: 'detail_image' },
+      { header: 'Full Image', dataKey: 'full_image' },
+      { header: 'Thumbnail Image', dataKey: 'thumbnail_image' },
+      { header: 'Size Chart Image', dataKey: 'size_chart_image' },
+      { header: 'Swatch Image', dataKey: 'swatch_image' },
+      { header: 'Additional Image 1', dataKey: 'additional_image_1' },
+      { header: 'Additional Image 2', dataKey: 'additional_image_2' },
+      { header: 'Additional Image 3', dataKey: 'additional_image_3' },
+      { header: 'Main Video', dataKey: 'main_video' },
+      { header: 'Additional Video 1', dataKey: 'additional_video_1' },
+      { header: 'Material 1 Name', dataKey: 'material_name_1' },
+      { header: 'Material 1 Percentage', dataKey: 'material_1_percentage' },
+      { header: 'Material 2 Name', dataKey: 'material_name_2' },
+      { header: 'Material 2 Percentage', dataKey: 'material_2_percentage' },
+      { header: 'Material 3 Name', dataKey: 'material_name_3' },
+      { header: 'Material 3 Percentage', dataKey: 'material_3_percentage' },
+      { header: 'Material 4 Name', dataKey: 'material_name_4' },
+      { header: 'Material 4 Percentage', dataKey: 'material_4_percentage' },
+      { header: 'Material 5 Name', dataKey: 'material_name_5' },
+      { header: 'Material 5 Percentage', dataKey: 'material_5_percentage' },
+      { header: 'Additional Color 1', dataKey: 'additional_color_1' },
+      { header: 'Additional Color 2', dataKey: 'additional_color_2' },
     ];
 
     const dataToExport = selectedRowKeys.length > 0
@@ -632,7 +632,6 @@ const App = () => {
     XLSX.utils.book_append_sheet(workbook, worksheet, 'SKUs');
 
     const now = new Date();
-    // 使用非 LaTeX 格式
     const timestamp = `${now.getFullYear().toString().slice(-2)}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}${now.getSeconds().toString().padStart(2, '0')}`;
     XLSX.writeFile(workbook, `skus_${timestamp}.xlsx`);
     message.success('SKU data exported successfully!');
@@ -689,13 +688,13 @@ const App = () => {
   return (
     <ConfigProvider locale={zhCN}>
       <div className="App">
-        <div className="header-container"> {/* 新增容器用于 Logo, Title, Logout */}
+        <div className="header-container">
             <div className="logo-title-container">
                 <img src={JFJPLogo} alt="JFJP Logo" className="header-logo" />
                 <h1 className="header-title">SKU Management System</h1>
             </div>
             <div className="header-right">
-                <span className="language-selector">EN / 中文</span> {/* 图片中的语言切换 */}
+                <span className="language-selector">EN / 中文</span>
                 <Button onClick={handleLogout} type="default">退出登录</Button>
             </div>
         </div>
@@ -716,7 +715,7 @@ const App = () => {
             style={{ marginBottom: 16 }}
           />
         )}
-        <div className="table-actions-container"> {/* 新增容器用于操作按钮和搜索框 */}
+        <div className="table-actions-container">
             <Space className="table-top-buttons">
                 <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingSku(null); setIsModalOpen(true); }}>
                     Create SKU (Modal)
@@ -732,20 +731,6 @@ const App = () => {
                 <Button icon={<ExportOutlined />} onClick={handleExport}>
                     Export All
                 </Button>
-                {/* 图片中没有这个按钮，暂时移除
-                {selectedRowKeys.length > 0 && (
-                    <Popconfirm
-                        title={`Are you sure to delete ${selectedRowKeys.length} selected SKUs?`}
-                        onConfirm={handleDeleteSelected}
-                        okText="Yes"
-                        cancelText="No"
-                    >
-                        <Button danger icon={<DeleteOutlined />}>
-                            Delete Selected ({selectedRowKeys.length})
-                        </Button>
-                    </Popconfirm>
-                )}
-                */}
             </Space>
             <div className="search-bar-container">
                 <Input
@@ -753,9 +738,8 @@ const App = () => {
                     placeholder="Search by SKU, UPC, or Name"
                     value={searchText}
                     onChange={e => setSearchText(e.target.value)}
-                    style={{ width: 300 }} // 调整搜索框宽度
+                    style={{ width: 300 }}
                 />
-                {/* 图片中没有右侧的筛选器，暂时移除 */}
             </div>
         </div>
 
@@ -768,7 +752,7 @@ const App = () => {
               },
             }}
             columns={getTableColumns()}
-            dataSource={filteredDataSource} // 使用过滤后的数据源
+            dataSource={filteredDataSource}
             loading={loading}
             scroll={{ x: 'max-content', y: '60vh' }}
             bordered
@@ -778,16 +762,17 @@ const App = () => {
                 pageSizeOptions: ['15', '20', '50', '100', '200'],
                 showSizeChanger: true,
                 defaultPageSize: 15,
-                // 图片中分页器显示为 "15 条/页"，需要自定义 showTotal
-                showTotal: (total, range) => `${range[0]}-${range[1]} / ${total} 条`, // 示例：显示 "1-15 / 100 条"
+                showTotal: (total, range) => `${range[0]}-${range[1]} / ${total} 条`,
               }}
+            footer={() => (
+              <div style={{ textAlign: 'center' }}>
+                <Button type="default" icon={<PlusOutlined />} onClick={handleAddInline}>
+                  Add New SKU (Inline)
+                </Button>
+              </div>
+            )}
           />
         </Form>
-        <div style={{ textAlign: 'center', marginTop: '16px' }}>
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleAddInline}>
-                Add New SKU (Inline)
-            </Button>
-        </div>
         <SkuFormModal
           visible={isModalOpen}
           onClose={handleModalClose}
