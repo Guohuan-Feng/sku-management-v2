@@ -783,7 +783,7 @@ const App = () => {
               }}
           />
         </Form>
-        <div style={{ textAlign: 'left', marginTop: '16px' }}>
+        <div style={{ textAlign: 'center', marginTop: '16px' }}>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAddInline}>
                 Add New SKU (Inline)
             </Button>
