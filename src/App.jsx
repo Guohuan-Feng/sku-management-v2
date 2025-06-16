@@ -606,7 +606,7 @@ const App = () => {
     XLSX.utils.book_append_sheet(workbook, worksheet, 'SKUs');
 
     const now = new Date();
-    const timestamp = `${now.getFullYear().toString().slice(-2)}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}${now.getSeconds().toString().padStart(2, '0')}`;
+    const timestamp = `<span class="math-inline">\{now\.getFullYear\(\)\.toString\(\)\.slice\(\-2\)\}</span>{(now.getMonth() + 1).toString().padStart(2, '0')}<span class="math-inline">\{now\.getDate\(\)\.toString\(\)\.padStart\(2, '0'\)\}\_</span>{now.getHours().toString().padStart(2, '0')}<span class="math-inline">\{now\.getMinutes\(\)\.toString\(\)\.padStart\(2, '0'\)\}</span>{now.getSeconds().toString().padStart(2, '0')}`;
     XLSX.writeFile(workbook, `skus_${timestamp}.xlsx`);
     message.success('SKU data exported successfully!');
   };
@@ -654,9 +654,11 @@ const App = () => {
   return (
     <ConfigProvider locale={zhCN}>
       <div className="App">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h1 style={{ color: 'black', margin: 0 }}>SKU Management System</h1>
-            <Button onClick={handleLogout} type="default">退出登录</Button>
+        <div style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', marginBottom: '20px' }}>
+            {/* Logo Placeholder */}
+            <img src="/logo.png" alt="Your Company Logo" style={{ height: '200px', marginRight: '10px' }} /> {/* 这里是预留位置 */}
+            <h1 style={{ color: 'black', margin: 0, fontSize: '2em' }}>SKU Management System</h1> {/* 字体大小调整为 2em */}
+            <Button onClick={handleLogout} type="default" style={{ marginLeft: 'auto' }}>退出登录</Button>
         </div>
 
         {errorMessages.length > 0 && (

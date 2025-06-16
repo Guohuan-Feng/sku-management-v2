@@ -117,7 +117,7 @@ const AuthForm = ({ onAuthSuccess }) => {
 
           <Divider plain>或者</Divider>
 
-          <Form.Item>
+          <Form.Item style={{ display: 'none' }}> {/* 添加 style={{ display: 'none' }} 来隐藏按钮 */}
             <Button
               type="default"
               onClick={handleGoogleLogin}
