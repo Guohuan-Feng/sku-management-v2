@@ -94,7 +94,7 @@ const App = () => {
   const isEditing = (record) => record.key === editingKey;
 
   const edit = (record) => {
-    if (editingKey && editingKey !== record.key) {
+    if (editingKey) {
       message.warning(t('tableOperations.saveOrCancelCurrentEdit')); // 翻译
       return;
     }
@@ -693,6 +693,10 @@ const App = () => {
     )
   );
 
+  const toggleLanguage = () => {
+    const newLang = i18n.language === 'en' ? 'zh' : 'en';
+    i18n.changeLanguage(newLang);
+  };
 
   if (!isLoggedIn) {
     return <AuthForm onAuthSuccess={handleAuthSuccess} />;
@@ -710,18 +714,10 @@ const App = () => {
                 {/* 语言切换按钮 */}
                 <Space className="language-selector">
                     <Button
-                        type={i18n.language === 'en' ? 'primary' : 'default'} // 当前语言高亮
-                        onClick={() => i18n.changeLanguage('en')}
+                        onClick={toggleLanguage}
                         size="small"
                     >
-                        EN
-                    </Button>
-                    <Button
-                        type={i18n.language === 'zh' ? 'primary' : 'default'} // 当前语言高亮
-                        onClick={() => i18n.changeLanguage('zh')}
-                        size="small"
-                    >
-                        中文
+                        {i18n.language === 'en' ? '中文' : 'EN'} {/* 根据当前语言显示不同的文本 */}
                     </Button>
                 </Space>
                 <Button onClick={handleLogout} type="default">{t('logout')}</Button> {/* 翻译 */}
