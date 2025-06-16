@@ -2,7 +2,8 @@
 import { Modal, Form, Input, Select, InputNumber, Button, Row, Col, message } from 'antd';
 import { useEffect, useState } from 'react';
 import { generateAIDescription } from '../services/skuApiService';
-import React from 'react'; 
+import React from 'react';
+import { useTranslation } from 'react-i18next'; // 引入 useTranslation
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -24,11 +25,11 @@ const SkuFormModal = ({
   apiFieldErrors,
   showAllMode = false,
 }) => {
+  const { t } = useTranslation(); // 使用 useTranslation 钩子
   const [form] = Form.useForm();
   const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
-    // ... (useEffect hooks remain the same)
     if (visible) {
       if (initialData) {
         const formData = { ...initialData };
@@ -76,7 +77,6 @@ const SkuFormModal = ({
   }, [apiFieldErrors, form]);
 
   const handleOk = () => {
-    // ... (handleOk function remains the same)
     form
       .validateFields()
       .then(async (values) => {
@@ -87,7 +87,7 @@ const SkuFormModal = ({
             if (!isNaN(parsedValue)) {
                 submissionValues[field.name] = field.isFee ? parseFloat(parsedValue.toFixed(2)) : parsedValue;
             } else {
-                submissionValues[field.name] = null; 
+                submissionValues[field.name] = null;
             }
           }
           if (field.name === 'status' && submissionValues[field.name] !== undefined) {
@@ -112,58 +112,46 @@ const SkuFormModal = ({
   };
 
   const handleAIGenerate = async () => {
-    console.log('Debug: handleAIGenerate function started.'); // 1. Log entry
-
     if (!fieldsConfig || !Array.isArray(fieldsConfig) || fieldsConfig.length === 0) {
-      console.error('Debug: fieldsConfig prop is missing, not an array, or empty. Cannot proceed.');
-      message.error('AI描述功能配置错误，请联系管理员。');
+      message.error(t('aiDescription.configError')); // 翻译
       return;
     }
-    console.log('Debug: fieldsConfig is present with length:', fieldsConfig.length); // 2. Log fieldsConfig status
-    console.log('Debug: AI_INPUT_FIELDS:', AI_INPUT_FIELDS); // 2a. Log AI_INPUT_FIELDS
 
     const currentFormValues = form.getFieldsValue(AI_INPUT_FIELDS);
-    console.log('Debug: currentFormValues from form:', currentFormValues); // 3. Log form values
-    
+
     const fieldDetails = AI_INPUT_FIELDS.map(fieldName => {
       const fieldConfigItem = fieldsConfig.find(f => f.name === fieldName);
-      if (!fieldConfigItem) {
-        console.warn(`Debug: No fieldConfig found for AI input field: ${fieldName}`);
-      }
-      const label = fieldConfigItem ? fieldConfigItem.label : fieldName;
+      const label = fieldConfigItem ? t(fieldConfigItem.label) : fieldName; // 翻译 label
       const value = currentFormValues[fieldName];
       const isFilled = value !== undefined && value !== null && String(value).trim() !== '';
       return { name: fieldName, label, isFilled };
     });
-    console.log('Debug: fieldDetails processed:', fieldDetails); // 4. Log processed field details
 
     const filledFields = fieldDetails.filter(f => f.isFilled);
     const missingFields = fieldDetails.filter(f => !f.isFilled);
 
     let messageParts = [];
     if (missingFields.length > 0) {
-      messageParts.push(`为了AI能更准确地生成描述，建议补充以下字段：\n- ${missingFields.map(f => f.label).join('\n- ')}`);
+      messageParts.push(`${t('aiDescription.suggestMissingFields')}\n- ${missingFields.map(f => f.label).join('\n- ')}`); // 翻译
     } else {
-      messageParts.push("所有推荐的AI输入字段均已填写。");
+      messageParts.push(t('aiDescription.allRecommendedFieldsFilled')); // 新增翻译键
     }
 
     if (filledFields.length > 0) {
-      messageParts.push(`\n当前已填写的相关字段：\n- ${filledFields.map(f => f.label).join('\n- ')}`);
+      messageParts.push(`\n${t('aiDescription.currentFilledFields')}\n- ${filledFields.map(f => f.label).join('\n- ')}`); // 翻译
     } else if (missingFields.length > 0) {
-      messageParts.push("\n当前未填写任何推荐的AI输入字段。");
+      messageParts.push(`\n${t('aiDescription.noRecommendedFieldsFilled')}`); // 翻译
     }
-    
+
     const confirmDialogContent = messageParts.join('\n');
-    console.log('Debug: Confirm dialog content to be displayed:', confirmDialogContent); // 5. Log dialog content
 
     Modal.confirm({
-      title: '确认生成AI描述吗？',
-      content: <div style={{ whiteSpace: 'pre-line' }}>{confirmDialogContent + "\n\n是否继续生成？"}</div>,
-      okText: '生成',
-      cancelText: '取消',
+      title: t('aiDescription.confirmGenerateTitle'), // 翻译
+      content: <div style={{ whiteSpace: 'pre-line' }}>{confirmDialogContent + `\n\n${t('aiDescription.continueGenerate')}`}</div>, // 翻译
+      okText: t('aiDescription.generate'), // 翻译
+      cancelText: t('modalButtons.cancel'), // 翻译
       maskClosable: true,
       onOk: async () => {
-        console.log('Debug: Modal.confirm onOk triggered.'); // 6. Log onOk
         const payload = {};
         AI_INPUT_FIELDS.forEach(fieldName => {
           const value = currentFormValues[fieldName];
@@ -171,18 +159,15 @@ const SkuFormModal = ({
             payload[fieldName] = String(value).trim();
           }
         });
-        console.log('Debug: Payload for AI API:', payload); // 6a. Log payload
 
         if (Object.keys(payload).length === 0) {
-          console.log('Debug: Payload is empty, AI call will be skipped.'); // 6b. Log empty payload
-          message.warning('请输入一些有效的产品信息以供AI生成描述。');
-          return; 
+          message.warning(t('aiDescription.noProductInfoForAI')); // 翻译
+          return;
         }
 
         try {
           setAiLoading(true);
           const aiResponse = await generateAIDescription(payload);
-          console.log('Debug: AI Response from backend:', aiResponse); // 6c. Log AI response
 
           const fieldsToUpdate = {
             title: aiResponse['product title'],
@@ -201,40 +186,39 @@ const SkuFormModal = ({
                   filteredFieldsToUpdate[key] = fieldsToUpdate[key];
               }
           }
-          console.log('Debug: Data being set to form:', filteredFieldsToUpdate); // 6d. Log data to set to form
 
           form.setFieldsValue(filteredFieldsToUpdate);
-          message.success('AI成功生成了描述信息！');
+          message.success(t('aiDescription.aiDescSuccess')); // 翻译
 
         } catch (error) {
-          console.error('Debug: Error in Modal.confirm onOk during AI call:', error); // 7. Log error in onOk
-          message.error(`AI描述生成失败: ${error.message || '请稍后再试'}`);
+          console.error('Error in Modal.confirm onOk during AI call:', error);
+          message.error(`${t('aiDescription.aiDescError')}${error.message || '请稍后再试'}`); // 翻译
         } finally {
           setAiLoading(false);
-          console.log('Debug: aiLoading set to false in onOk finally block.'); // 7a. Log aiLoading reset
         }
       },
       onCancel: () => {
-        console.log('Debug: Modal.confirm onCancel triggered.'); // 8. Log onCancel
+        // Cancel logic
       },
     });
-    console.log('Debug: Modal.confirm has been invoked.'); // 9. Log after Modal.confirm call
   };
 
   const renderField = (field) => {
-    // ... (renderField function remains the same)
+    // 提取 placeholder 文本
+    const placeholderText = field?.example || field?.description || '';
+
     switch (field.type) {
       case 'text':
-        return <Input placeholder={field.example || field.description} disabled={field.name === 'id'} />;
+        return <Input placeholder={placeholderText} disabled={field.name === 'id'} />;
       case 'number':
         return <InputNumber
           style={{ width: '100%' }}
-          placeholder={field.example || field.description}
+          placeholder={placeholderText}
           min={field.validation?.min}
-          precision={field.isFee ? 2 : 0} 
+          precision={field.isFee ? 2 : 0}
         />;
       case 'textarea':
-        return <TextArea rows={field.rows || 2} placeholder={field.example || field.description} />;
+        return <TextArea rows={field.rows || 2} placeholder={placeholderText} />;
       case 'select':
         let optionsSource = field.options || [];
         if (field.name === 'status') optionsSource = statusOptions;
@@ -242,7 +226,7 @@ const SkuFormModal = ({
         if (field.name === 'allow_dropship_return') optionsSource = [{value: 'True', label: 'Yes'}, {value: 'False', label: 'No'}];
 
         return (
-          <Select placeholder={field.description}>
+          <Select placeholder={placeholderText}>
             {optionsSource.map((opt) => (
               <Option key={opt.value} value={opt.value}>
                 {opt.label}
@@ -251,9 +235,9 @@ const SkuFormModal = ({
           </Select>
         );
       case 'url':
-        return <Input type="url" placeholder={field.example || field.description} />;
+        return <Input type="url" placeholder={placeholderText} />;
       default:
-        return <Input placeholder={field.example || field.description} />;
+        return <Input placeholder={placeholderText} />;
     }
   };
 
@@ -261,25 +245,25 @@ const SkuFormModal = ({
   const otherFields = fieldsConfig ? fieldsConfig.filter(field => !field.isMandatory && field.name !== 'id') : [];
 
   const canUseAI = fieldsConfig && fieldsConfig.some(
-    f => AI_INPUT_FIELDS.includes(f.name) || 
+    f => AI_INPUT_FIELDS.includes(f.name) ||
          ['title', 'short_desc', 'long_desc', 'key_features_1', 'key_features_2', 'key_features_3', 'key_features_4', 'key_features_5'].includes(f.name)
   );
 
   return (
     <Modal
-      title={showAllMode ? 'View/Edit All SKU Fields' : (initialData ? 'Edit SKU' : 'Create SKU')}
+      title={showAllMode ? t('modalTitles.viewEditAll') : (initialData ? t('modalTitles.editSku') : t('modalTitles.createSku'))}
       open={visible}
-      onOk={handleOk} 
+      onOk={handleOk}
       onCancel={onClose}
       width="80vw"
       destroyOnClose
       maskClosable={false}
       footer={[
           <Button key="back" onClick={onClose}>
-            Cancel
+            {t('modalButtons.cancel')}
           </Button>,
           <Button key="submit" type="primary" onClick={handleOk} loading={false}>
-            {initialData ? 'Update' : 'Create'}
+            {initialData ? t('modalButtons.update') : t('modalButtons.create')}
           </Button>,
         ]}
     >
@@ -288,16 +272,16 @@ const SkuFormModal = ({
           <div style={{ marginBottom: '24px', border: '1px solid #d9d9d9', padding: '16px', borderRadius: '8px' }}>
             <Row align="middle" style={{ marginBottom: '16px' }}>
               <Col>
-                <h3 style={{ marginTop: 0, marginBottom: 0, color: '#1890ff' }}>Required Fields (Mandatory)</h3>
+                <h3 style={{ marginTop: 0, marginBottom: 0, color: '#1890ff' }}>{t('modalSections.requiredFields')}</h3> {/* 翻译 */}
               </Col>
               {canUseAI && (
-                <Col style={{ marginLeft: '16px' }}> 
+                <Col style={{ marginLeft: '16px' }}>
                   <Button
                     key="aiGenerateRequired"
                     onClick={handleAIGenerate}
                     loading={aiLoading}
                   >
-                    ✨ Use AI description
+                    {t('aiDescription.useAI')} {/* 翻译 */}
                   </Button>
                 </Col>
               )}
@@ -307,19 +291,25 @@ const SkuFormModal = ({
                 <Col span={field.gridWidth || 8} key={field.name}>
                   <Form.Item
                     name={field.name}
-                    label={field.label}
+                    label={t(field.label)}
                     rules={field.validation ?
                       Object.entries(field.validation).reduce((acc, [key, value]) => {
                           if (key === 'required' && value) {
-                              acc.push({ required: true, message: field.validation.requiredMsg || `${field.label} is required!` });
+                              acc.push({ required: true, message: t(field.validation.requiredMsg, { label: t(field.label) }) }); // 翻译并传递 label
                           } else if (key === 'pattern' && value) {
-                              acc.push({ pattern: value, message: field.validation.patternMsg || 'Invalid format!' });
+                              // 对于 patternMsg，需要根据实际内容判断是否需要传递参数
+                              const patternMsgKey = field.validation.patternMsg;
+                              let messageParams = {};
+                              if (patternMsgKey === 'validation.generalPattern' || patternMsgKey === 'validation.maxCharacters') {
+                                messageParams = { count: field.validation.maxLength };
+                              }
+                              acc.push({ pattern: value, message: t(patternMsgKey, messageParams) }); // 翻译
                           } else if (key === 'maxLength' && value) {
-                              acc.push({ max: value, message: field.validation.maxLengthMsg || `Max ${value} characters!` });
+                              acc.push({ max: value, message: t(field.validation.maxLengthMsg, { count: value }) }); // 翻译并传递 count
                           } else if (key === 'min' && value !== undefined && (field.type === 'number' || field.isFee)) {
-                              acc.push({ type: 'number', min: value, message: field.validation.minMsg || `Cannot be less than ${value}!` });
+                              acc.push({ type: 'number', min: value, message: t(field.validation.minMsg, { value: value }) }); // 翻译并传递 value
                           } else if (key === 'max' && value !== undefined && (field.type === 'number' || field.isFee)) {
-                              acc.push({ type: 'number', max: value, message: field.validation.maxMsg || `Cannot be greater than ${value}!` });
+                              acc.push({ type: 'number', max: value, message: t(field.validation.maxMsg, { value: value }) }); // 翻译并传递 value
                           }
                           return acc;
                       }, [])
@@ -336,10 +326,10 @@ const SkuFormModal = ({
         )}
 
         <div style={showAllMode ? { border: '1px solid #d9d9d9', padding: '16px', borderRadius: '8px' } : {}}>
-            {showAllMode && <h3 style={{ marginTop: 0, color: '#1890ff' }}>Other Fields</h3>}
+            {showAllMode && <h3 style={{ marginTop: 0, color: '#1890ff' }}>{t('modalSections.otherFields')}</h3>} {/* 翻译 */}
             <Row gutter={16}>
-              {(showAllMode && fieldsConfig ? fieldsConfig : otherFields).map((field) => { // Added fieldsConfig check for safety
-                if (!field || field.name === 'id') return null; 
+              {(showAllMode && fieldsConfig ? fieldsConfig : otherFields).map((field) => {
+                if (!field || field.name === 'id') return null;
                 if (showAllMode && field.isMandatory) return null;
 
                 return (
@@ -347,19 +337,24 @@ const SkuFormModal = ({
                     <Col span={field.gridWidth || 8}>
                       <Form.Item
                         name={field.name}
-                        label={field.label}
+                        label={t(field.label)}
                         rules={field.validation ?
                             Object.entries(field.validation).reduce((acc, [key, value]) => {
                                 if (key === 'required' && value) {
-                                    acc.push({ required: true, message: field.validation.requiredMsg || `${field.label} is required!` });
+                                    acc.push({ required: true, message: t(field.validation.requiredMsg, { label: t(field.label) }) }); // 翻译并传递 label
                                 } else if (key === 'pattern' && value) {
-                                    acc.push({ pattern: value, message: field.validation.patternMsg || 'Invalid format!' });
+                                    const patternMsgKey = field.validation.patternMsg;
+                                    let messageParams = {};
+                                    if (patternMsgKey === 'validation.generalPattern' || patternMsgKey === 'validation.maxCharacters') {
+                                        messageParams = { count: field.validation.maxLength };
+                                    }
+                                    acc.push({ pattern: value, message: t(patternMsgKey, messageParams) }); // 翻译
                                 } else if (key === 'maxLength' && value) {
-                                    acc.push({ max: value, message: field.validation.maxLengthMsg || `Max ${value} characters!` });
+                                    acc.push({ max: value, message: t(field.validation.maxLengthMsg, { count: value }) }); // 翻译并传递 count
                                 } else if (key === 'min' && value !== undefined && (field.type === 'number' || field.isFee)) {
-                                    acc.push({ type: 'number', min: value, message: field.validation.minMsg || `Cannot be less than ${value}!` });
+                                    acc.push({ type: 'number', min: value, message: t(field.validation.minMsg, { value: value }) }); // 翻译并传递 value
                                 } else if (key === 'max' && value !== undefined && (field.type === 'number' || field.isFee)) {
-                                    acc.push({ type: 'number', max: value, message: field.validation.maxMsg || `Cannot be greater than ${value}!` });
+                                    acc.push({ type: 'number', max: value, message: t(field.validation.maxMsg, { value: value }) }); // 翻译并传递 value
                                 }
                                 return acc;
                             }, [])

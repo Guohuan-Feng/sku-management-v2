@@ -1,8 +1,7 @@
 // src/App.jsx
 import { useState, useEffect, useRef } from 'react';
 import './App.css';
-import { Table, ConfigProvider, Button, message, Upload, Space, Popconfirm, Alert, Form, Input } from 'antd';
-import zhCN from 'antd/locale/zh_CN';
+import { Table, ConfigProvider, Button, message, Upload, Space, Popconfirm, Alert, Form, Input } from 'antd'; // 导入 Space 组件
 import * as XLSX from 'xlsx';
 import { fieldsConfig, statusOptions, conditionOptions } from './components/fieldConfig';
 import { UploadOutlined, EditOutlined, DeleteOutlined, PlusOutlined, ExportOutlined, SaveOutlined, CloseOutlined, EyeOutlined, SearchOutlined } from '@ant-design/icons';
@@ -11,10 +10,18 @@ import EditableCell from './components/EditableCell';
 import { getAllSkus, createSku, updateSku, deleteSku, uploadSkuCsv } from './services/skuApiService';
 import AuthForm from './components/AuthForm';
 
+// 导入 Ant Design 语言包
+import enUS from 'antd/locale/en_US';
+import zhCN from 'antd/locale/zh_CN';
+
+// 导入 useTranslation
+import { useTranslation } from 'react-i18next';
+
 // 假设图片中的 Logo 是一个本地图片，或者你可以替换为CDN链接
 import JFJPLogo from '/JFJP_logo.png'; // 假设你有一个 JFJP_logo.png 在 public 目录下
 
 const App = () => {
+  const { t, i18n } = useTranslation(); // 使用 useTranslation 钩子
   const [form] = Form.useForm();
   const [dataSource, setDataSource] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -35,6 +42,12 @@ const App = () => {
   // 新增登录状态
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
+  // Ant Design 语言包映射
+  const antdLocales = {
+    en: enUS,
+    zh: zhCN,
+  };
+
   // 检查本地存储中的 token，判断用户是否已登录
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -54,11 +67,11 @@ const App = () => {
     try {
       const data = await getAllSkus();
       setDataSource(data.map(item => ({ ...item, key: item.id })));
-      message.success('SKU data loaded successfully!');
+      message.success(t('messages.skuDataLoaded')); // 翻译
     } catch (error) {
       console.error("Failed to fetch SKUs:", error);
-      message.error(`Failed to fetch SKUs: ${error.message}`);
-      setErrorMessages(prev => [...prev, `Failed to fetch SKUs: ${error.message}`]);
+      message.error(`${t('messages.failedToFetchSkus')}${error.message}`); // 翻译
+      setErrorMessages(prev => [...prev, `${t('messages.failedToFetchSkus')}${error.message}`]); // 翻译
       setDataSource([]);
     } finally {
       setLoading(false);
@@ -68,20 +81,21 @@ const App = () => {
   const handleAuthSuccess = () => {
     setIsLoggedIn(true);
     fetchSkusWithHandling();
+    message.success(t('messages.loggedIn')); // 翻译
   };
 
   const handleLogout = () => {
     localStorage.removeItem('access_token');
     setIsLoggedIn(false);
     setDataSource([]);
-    message.info('您已退出登录。');
+    message.info(t('messages.loggedOut')); // 翻译
   };
 
   const isEditing = (record) => record.key === editingKey;
 
   const edit = (record) => {
     if (editingKey && editingKey !== record.key) {
-      message.warning('Please save or cancel the current editing row before editing another!');
+      message.warning(t('tableOperations.saveOrCancelCurrentEdit')); // 翻译
       return;
     }
 
@@ -144,10 +158,10 @@ const App = () => {
 
       if (String(key).startsWith('new-temp-id')) {
         await createSku(apiPayload);
-        message.success('SKU created successfully!');
+        message.success(t('messages.skuCreated')); // 翻译
       } else {
         await updateSku(apiPayload.id, apiPayload);
-        message.success('SKU updated successfully!');
+        message.success(t('messages.skuUpdated')); // 翻译
       }
 
       fetchSkusWithHandling();
@@ -156,13 +170,13 @@ const App = () => {
     } catch (errInfo) {
       console.error('Validate Failed (Save Inline):', errInfo);
       if (errInfo.errorFields) {
-        message.error('Please fix validation errors in the form.');
+        message.error(t('messages.validationFailed')); // 翻译
       } else if (errInfo.fieldErrors && Array.isArray(errInfo.fieldErrors)) {
         setFormApiFieldErrors(errInfo.fieldErrors);
         const apiErrorsMsg = errInfo.fieldErrors.map(e => `${e.loc[e.loc.length - 1]}: ${e.msg}`).join('; ');
-        message.error(`API Error: ${apiErrorsMsg}`);
+        message.error(t('messages.apiError', { message: apiErrorsMsg })); // 翻译
       } else {
-        message.error(`Failed to save SKU: ${errInfo.message || 'Unknown error'}`);
+        message.error(t('messages.failedToSaveSku', { message: errInfo.message || 'Unknown error' })); // 翻译
       }
     } finally {
       setLoading(false);
@@ -190,7 +204,7 @@ const App = () => {
         if (field.name === 'id') return null;
 
         return {
-          title: field.label,
+          title: t(field.label), // 翻译字段标题
           dataIndex: field.name,
           key: field.name,
           width: field.name === 'vendor_sku' ? 180 : (field.type === 'textarea' || field.name.toLowerCase().includes('desc') ? 250 : 150),
@@ -204,7 +218,7 @@ const App = () => {
                 dataIndex={field.name}
                 inputType={field.type}
                 record={record}
-                title={field.label}
+                title={t(field.label)} // 翻译
               >
                 {text}
               </EditableCell>
@@ -216,7 +230,7 @@ const App = () => {
             record,
             inputType: field.type,
             dataIndex: field.name,
-            title: field.label,
+            title: t(field.label), // 翻译
             editing: isEditing(record),
             onClick: () => {
               if (!isEditing(record)) {
@@ -228,7 +242,7 @@ const App = () => {
       }).filter(Boolean);
 
     generatedColumns.push({
-      title: 'Operation',
+      title: t('tableColumns.operation'), // 翻译
       dataIndex: 'operation',
       key: 'operation',
       fixed: 'right',
@@ -239,17 +253,17 @@ const App = () => {
         return editable ? (
           <Space size="small">
             <Button type="link" icon={<SaveOutlined />} onClick={() => save(record.key)} loading={loading}>
-              Save
+              {t('tableOperations.save')} {/* 翻译 */}
             </Button>
-            <Popconfirm title="Sure to cancel?" onConfirm={cancel}>
+            <Popconfirm title={t('tableOperations.cancel')} onConfirm={cancel}> {/* 翻译 */}
               <Button type="link" icon={<CloseOutlined />} danger>
-                Cancel
+                {t('tableOperations.cancel')} {/* 翻译 */}
               </Button>
             </Popconfirm>
           </Space>
         ) : (
           <Space size="small">
-            <Button icon={<EditOutlined />} onClick={() => edit(record)} type="link">Edit</Button>
+            <Button icon={<EditOutlined />} onClick={() => edit(record)} type="link">{t('tableOperations.edit')}</Button> {/* 翻译 */}
             <Button
               icon={<EyeOutlined />}
               onClick={() => {
@@ -258,15 +272,15 @@ const App = () => {
               }}
               type="link"
             >
-              Show All
+              {t('tableOperations.showAll')} {/* 翻译 */}
             </Button>
             <Popconfirm
-              title="Are you sure to delete this SKU?"
+              title={t('tableOperations.deleteConfirmTitle')} // 翻译
               onConfirm={() => handleDelete(record.key)}
-              okText="Yes"
-              cancelText="No"
+              okText={t('modalButtons.update')} // 可以复用 update 按钮的文本
+              cancelText={t('modalButtons.cancel')} // 可以复用 cancel 按钮的文本
             >
-              <Button icon={<DeleteOutlined />} type="link" danger>Delete</Button>
+              <Button icon={<DeleteOutlined />} type="link" danger>{t('tableOperations.delete')}</Button> {/* 翻译 */}
             </Popconfirm>
           </Space>
         );
@@ -287,7 +301,7 @@ const App = () => {
 
   const handleAddInline = () => {
     if (editingKey) {
-      message.warning('Please save or cancel the current editing row first!');
+      message.warning(t('tableOperations.saveOrCancelCurrentEdit')); // 翻译
       return;
     }
 
@@ -332,23 +346,23 @@ const App = () => {
         setDataSource(dataSource.filter(item => item.key !== skuIdToDelete));
         setEditingKey('');
         setEditingRowData({});
-        message.success('New SKU discarded!');
+        message.success(t('tableOperations.discardNewSku')); // 翻译
       } else {
         const skuToDelete = dataSource.find(item => item.key === skuIdToDelete);
         if (!skuToDelete || String(skuToDelete.id).startsWith('new-temp-id')) {
-            message.error('Cannot delete. SKU ID not found or is a temporary ID.');
+            message.error(t('messages.skuIDNotFoundOrTemp')); // 翻译
             setLoading(false);
             return;
         }
         await deleteSku(skuToDelete.id);
-        message.success('SKU deleted successfully!');
+        message.success(t('tableOperations.deleteSuccess')); // 翻译
         fetchSkusWithHandling();
       }
       setSelectedRowKeys(prevKeys => prevKeys.filter(k => k !== skuIdToDelete));
     } catch (error) {
       console.error('Failed to delete SKU:', error);
-      message.error(`Failed to delete SKU: ${error.message}`);
-      setErrorMessages(prev => [...prev, `Failed to delete SKU ID ${skuIdToDelete}: ${error.message}`]);
+      message.error(`${t('tableOperations.deleteError')}${error.message}`); // 翻译
+      setErrorMessages(prev => [...prev, `${t('tableOperations.deleteError')}ID ${skuIdToDelete}: ${error.message}`]); // 翻译
     } finally {
       setLoading(false);
     }
@@ -356,7 +370,7 @@ const App = () => {
 
   const handleDeleteSelected = async () => {
     if (selectedRowKeys.length === 0) {
-      message.warning('Please select SKUs to delete first!');
+      message.warning(t('tableOperations.selectToDelete')); // 翻译
       return;
     }
     setLoading(true);
@@ -382,22 +396,22 @@ const App = () => {
             successCount++;
             remainingSelectedKeys.splice(remainingSelectedKeys.indexOf(skuKey), 1);
           } else {
-             currentErrors.push(`SKU with key ${skuKey} not found or is an unsaved new item.`);
+             currentErrors.push(t('messages.skuIDNotFoundOrTemp', { key: skuKey })); // 翻译
           }
         }
       } catch (error) {
         console.error(`Failed to delete SKU with key ${skuKey}:`, error);
-        currentErrors.push(`Failed to delete SKU with key ${skuKey}: ${error.message}`);
+        currentErrors.push(`${t('tableOperations.deleteError')} key ${skuKey}: ${error.message}`); // 翻译
       }
     }
 
     setLoading(false);
     if (successCount > 0) {
-      message.success(`Successfully deleted ${successCount} SKUs!`);
+      message.success(t('tableOperations.deleteSelectedSuccess', { count: successCount })); // 翻译
     }
     if (currentErrors.length > 0) {
       setErrorMessages(prev => [...prev, ...currentErrors]);
-      message.error(`There were ${currentErrors.length} SKUs that failed to delete or were already removed. Please check prompts.`);
+      message.error(t('tableOperations.deleteSelectedError', { count: currentErrors.length })); // 翻译
     }
     if (successCount > 0 || selectedRowKeys.some(key => String(key).startsWith('new-temp-id'))) {
          fetchSkusWithHandling();
@@ -438,12 +452,12 @@ const App = () => {
 
       if (initialDataParam && initialDataParam.id && !String(initialDataParam.id).startsWith('new-temp-id')) {
         await updateSku(initialDataParam.id, submissionValues);
-        message.success('SKU updated successfully!');
+        message.success(t('messages.skuUpdated')); // 翻译
         success = true;
       } else {
         const { id: tempId, ...payload } = submissionValues;
         await createSku(payload);
-        message.success('SKU created successfully!');
+        message.success(t('messages.skuCreated')); // 翻译
         success = true;
       }
 
@@ -463,9 +477,9 @@ const App = () => {
       if (error.fieldErrors) {
         setFormApiFieldErrors(error.fieldErrors);
         const apiErrorsMsg = error.fieldErrors.map(e => `${e.loc[e.loc.length - 1]}: ${e.msg}`).join('; ');
-        message.error(`API Error: ${apiErrorsMsg}`);
+        message.error(t('messages.apiError', { message: apiErrorsMsg })); // 翻译
       } else {
-        message.error(`Failed to save SKU: ${error.message || 'Unknown error'}`);
+        message.error(t('messages.failedToSaveSku', { message: error.message || 'Unknown error' })); // 翻译
       }
       return false;
     } finally {
@@ -477,117 +491,116 @@ const App = () => {
   const handleViewAllModalClose = () => { setIsViewAllModalOpen(false); setViewingSku(null); setFormApiFieldErrors([]); };
 
   const handleExport = () => {
-    // These fields and their order are derived from your src/components/108.txt and src/components/requirefiled.txt, combined for a comprehensive export.
     const exportFieldsOrder = [
-      { header: 'Vendor SKU', dataKey: 'vendor_sku' },
-      { header: 'UPC', dataKey: 'UPC' },
-      { header: 'Product EN Name', dataKey: 'product_en_name' },
-      { header: 'Product CN Name', dataKey: 'product_cn_name' },
-      { header: 'Status', dataKey: 'status', type: 'status' },
-      { header: 'ATS', dataKey: 'ATS' },
-      { header: 'Dropship Price', dataKey: 'dropship_price' },
-      { header: 'MSRP$', dataKey: 'MSRP' },
-      { header: '$ HDL for Shipping', dataKey: 'HDL_for_shipping' },
-      { header: '$ HDL for Receiving', dataKey: 'HDL_for_receiving' },
-      { header: '$ HDL for Returning', dataKey: 'HDL_for_returning' },
-      { header: '$ Storage Monthly', dataKey: 'storage_monthly' },
-      { header: 'Allow Dropship Return', dataKey: 'allow_dropship_return', type: 'booleanToLabel' },
-      { header: 'Shipping Lead Time', dataKey: 'shipping_lead_time' },
-      { header: 'Division', dataKey: 'division' },
-      { header: 'Department', dataKey: 'department' },
-      { header: 'Category', dataKey: 'category' },
-      { header: 'Subcategory', dataKey: 'sub_category' },
-      { header: 'Class', dataKey: 'product_class' },
-      { header: 'Group', dataKey: 'group' },
-      { header: 'Subgroup', dataKey: 'subgroup' },
-      { header: 'Style', dataKey: 'style' },
-      { header: 'Substyle', dataKey: 'sub_style' },
-      { header: 'Brand', dataKey: 'brand' },
-      { header: 'Model', dataKey: 'model' },
-      { header: 'Color', dataKey: 'color' },
-      { header: 'Size', dataKey: 'size' },
-      { header: 'OptionName1', dataKey: 'option_1' },
-      { header: 'OptionName2', dataKey: 'option_2' },
-      { header: 'OptionName3', dataKey: 'option_3' },
-      { header: 'OptionName4', dataKey: 'option_4' },
-      { header: 'OptionName5', dataKey: 'option_5' },
-      { header: 'Gender', dataKey: 'gender' },
-      { header: 'Age Group', dataKey: 'age_group' },
-      { header: 'Country Of Origin', dataKey: 'country_of_region' },
-      { header: 'Color Code NRF', dataKey: 'color_code_NRF' },
-      { header: 'Color Desc', dataKey: 'color_desc' },
-      { header: 'Size Code NRF', dataKey: 'size_code_NRF' },
-      { header: 'Size Desc', dataKey: 'size_desc' },
-      { header: 'Manufacturer', dataKey: 'manufacturer' },
-      { header: 'OEM', dataKey: 'OEM' },
-      { header: 'Product Year', dataKey: 'product_year' },
-      { header: 'Condition', dataKey: 'condition', type: 'condition' },
-      { header: 'Prepack #', dataKey: 'prepack_code' },
-      { header: 'Remark', dataKey: 'remark' },
-      { header: 'Harmonized #', dataKey: 'harmonized_code' },
-      { header: 'UOM', dataKey: 'UOM' },
-      { header: 'Net Weight', dataKey: 'net_weight' },
-      { header: 'Gross Weight', dataKey: 'gross_weight' },
-      { header: 'Product Height', dataKey: 'product_height' },
-      { header: 'Product Length', dataKey: 'product_length' },
-      { header: 'Product Width', dataKey: 'product_width' },
-      { header: 'Box Height', dataKey: 'box_height' },
-      { header: 'Box Length', dataKey: 'box_length' },
-      { header: 'Box Width', dataKey: 'box_width' },
-      { header: 'Qty/Case', dataKey: 'qty_case' },
-      { header: 'Qty/Box', dataKey: 'qty_box' },
-      { header: 'Material Content', dataKey: 'material_content' },
-      { header: 'Tags', dataKey: 'tag' },
-      { header: 'Care Instructions', dataKey: 'care_instructions' },
-      { header: 'Ship From', dataKey: 'ship_from' },
-      { header: 'Ship To', dataKey: 'ship_to' },
-      { header: 'Ship Carrier', dataKey: 'ship_carrier' },
-      { header: 'Shipping Description', dataKey: 'ship_desc' },
-      { header: 'Return Policy', dataKey: 'return_policy' },
-      { header: 'Security Privacy', dataKey: 'security_privacy' },
-      { header: 'Dropship Description', dataKey: 'dropship_desc' },
-      { header: 'Title', dataKey: 'title' },
-      { header: 'Short Description', dataKey: 'short_desc' },
-      { header: 'Long Description', dataKey: 'long_desc' },
-      { header: 'Dropship Listing Title', dataKey: 'dropship_listing_title' },
-      { header: 'Dropship Short Description', dataKey: 'dropship_short_desc' },
-      { header: 'Dropship Long Description', dataKey: 'dropship_long_desc' },
-      { header: 'Keywords', dataKey: 'keywords' },
-      { header: 'Google Product Category', dataKey: 'google_product_category' },
-      { header: 'Google Product Type', dataKey: 'google_product_type' },
-      { header: 'Facebook Product Category', dataKey: 'facebook_product_category' },
-      { header: 'Color Map', dataKey: 'color_map' },
-      { header: 'Key Features 1', dataKey: 'key_features_1' },
-      { header: 'Key Features 2', dataKey: 'key_features_2' },
-      { header: 'Key Features 3', dataKey: 'key_features_3' },
-      { header: 'Key Features 4', dataKey: 'key_features_4' },
-      { header: 'Key Features 5', dataKey: 'key_features_5' },
-      { header: 'Main Image', dataKey: 'main_image' },
-      { header: 'Front Image', dataKey: 'front_image' },
-      { header: 'Back Image', dataKey: 'back_image' },
-      { header: 'Side Image', dataKey: 'side_image' },
-      { header: 'Detail Image', dataKey: 'detail_image' },
-      { header: 'Full Image', dataKey: 'full_image' },
-      { header: 'Thumbnail Image', dataKey: 'thumbnail_image' },
-      { header: 'Size Chart Image', dataKey: 'size_chart_image' },
-      { header: 'Swatch Image', dataKey: 'swatch_image' },
-      { header: 'Additional Image 1', dataKey: 'additional_image_1' },
-      { header: 'Additional Image 2', dataKey: 'additional_image_2' },
-      { header: 'Additional Image 3', dataKey: 'additional_image_3' },
-      { header: 'Main Video', dataKey: 'main_video' },
-      { header: 'Additional Video 1', dataKey: 'additional_video_1' },
-      { header: 'Material 1 Name', dataKey: 'material_name_1' },
-      { header: 'Material 1 Percentage', dataKey: 'material_1_percentage' },
-      { header: 'Material 2 Name', dataKey: 'material_name_2' },
-      { header: 'Material 2 Percentage', dataKey: 'material_2_percentage' },
-      { header: 'Material 3 Name', dataKey: 'material_name_3' },
-      { header: 'Material 3 Percentage', dataKey: 'material_3_percentage' },
-      { header: 'Material 4 Name', dataKey: 'material_name_4' },
-      { header: 'Material 4 Percentage', dataKey: 'material_4_percentage' },
-      { header: 'Material 5 Name', dataKey: 'material_name_5' },
-      { header: 'Material 5 Percentage', dataKey: 'material_5_percentage' },
-      { header: 'Additional Color 1', dataKey: 'additional_color_1' },
-      { header: 'Additional Color 2', dataKey: 'additional_color_2' },
+      { header: t('field.vendor_sku'), dataKey: 'vendor_sku' }, // 翻译
+      { header: t('field.UPC'), dataKey: 'UPC' }, // 翻译
+      { header: t('field.product_en_name'), dataKey: 'product_en_name' }, // 翻译
+      { header: t('field.product_cn_name'), dataKey: 'product_cn_name' }, // 翻译
+      { header: t('field.status'), dataKey: 'status', type: 'status' }, // 翻译
+      { header: t('field.ATS'), dataKey: 'ATS' }, // 翻译
+      { header: t('field.dropship_price'), dataKey: 'dropship_price' }, // 翻译
+      { header: t('field.MSRP'), dataKey: 'MSRP' }, // 翻译
+      { header: t('field.HDL_for_shipping'), dataKey: 'HDL_for_shipping' }, // 翻译
+      { header: t('field.HDL_for_receiving'), dataKey: 'HDL_for_receiving' }, // 翻译
+      { header: t('field.HDL_for_returning'), dataKey: 'HDL_for_returning' }, // 翻译
+      { header: t('field.storage_monthly'), dataKey: 'storage_monthly' }, // 翻译
+      { header: t('field.allow_dropship_return'), dataKey: 'allow_dropship_return', type: 'booleanToLabel' }, // 翻译
+      { header: t('field.shipping_lead_time'), dataKey: 'shipping_lead_time' }, // 翻译
+      { header: t('field.division'), dataKey: 'division' }, // 翻译
+      { header: t('field.department'), dataKey: 'department' }, // 翻译
+      { header: t('field.category'), dataKey: 'category' }, // 翻译
+      { header: t('field.sub_category'), dataKey: 'sub_category' }, // 翻译
+      { header: t('field.product_class'), dataKey: 'product_class' }, // 翻译
+      { header: t('field.group'), dataKey: 'group' }, // 翻译
+      { header: t('field.subgroup'), dataKey: 'subgroup' }, // 翻译
+      { header: t('field.style'), dataKey: 'style' }, // 翻译
+      { header: t('field.sub_style'), dataKey: 'sub_style' }, // 翻译
+      { header: t('field.brand'), dataKey: 'brand' }, // 翻译
+      { header: t('field.model'), dataKey: 'model' }, // 翻译
+      { header: t('field.color'), dataKey: 'color' }, // 翻译
+      { header: t('field.size'), dataKey: 'size' }, // 翻译
+      { header: t('field.option_1'), dataKey: 'option_1' }, // 翻译
+      { header: t('field.option_2'), dataKey: 'option_2' }, // 翻译
+      { header: t('field.option_3'), dataKey: 'option_3' }, // 翻译
+      { header: t('field.option_4'), dataKey: 'option_4' }, // 翻译
+      { header: t('field.option_5'), dataKey: 'option_5' }, // 翻译
+      { header: t('field.gender'), dataKey: 'gender' }, // 翻译
+      { header: t('field.age_group'), dataKey: 'age_group' }, // 翻译
+      { header: t('field.country_of_region'), dataKey: 'country_of_region' }, // 翻译
+      { header: t('field.color_code_NRF'), dataKey: 'color_code_NRF' }, // 翻译
+      { header: t('field.color_desc'), dataKey: 'color_desc' }, // 翻译
+      { header: t('field.size_code_NRF'), dataKey: 'size_code_NRF' }, // 翻译
+      { header: t('field.size_desc'), dataKey: 'size_desc' }, // 翻译
+      { header: t('field.manufacturer'), dataKey: 'manufacturer' }, // 翻译
+      { header: t('field.OEM'), dataKey: 'OEM' }, // 翻译
+      { header: t('field.product_year'), dataKey: 'product_year' }, // 翻译
+      { header: t('field.condition'), dataKey: 'condition', type: 'condition' }, // 翻译
+      { header: t('field.prepack_code'), dataKey: 'prepack_code' }, // 翻译
+      { header: t('field.remark'), dataKey: 'remark' }, // 翻译
+      { header: t('field.harmonized_code'), dataKey: 'harmonized_code' }, // 翻译
+      { header: t('field.UOM'), dataKey: 'UOM' }, // 翻译
+      { header: t('field.net_weight'), dataKey: 'net_weight' }, // 翻译
+      { header: t('field.gross_weight'), dataKey: 'gross_weight' }, // 翻译
+      { header: t('field.product_height'), dataKey: 'product_height' }, // 翻译
+      { header: t('field.product_length'), dataKey: 'product_length' }, // 翻译
+      { header: t('field.product_width'), dataKey: 'product_width' }, // 翻译
+      { header: t('field.box_height'), dataKey: 'box_height' }, // 翻译
+      { header: t('field.box_length'), dataKey: 'box_length' }, // 翻译
+      { header: t('field.box_width'), dataKey: 'box_width' }, // 翻译
+      { header: t('field.qty_case'), dataKey: 'qty_case' }, // 翻译
+      { header: t('field.qty_box'), dataKey: 'qty_box' }, // 翻译
+      { header: t('field.material_content'), dataKey: 'material_content' }, // 翻译
+      { header: t('field.tag'), dataKey: 'tag' }, // 翻译
+      { header: t('field.care_instructions'), dataKey: 'care_instructions' }, // 翻译
+      { header: t('field.ship_from'), dataKey: 'ship_from' }, // 翻译
+      { header: t('field.ship_to'), dataKey: 'ship_to' }, // 翻译
+      { header: t('field.ship_carrier'), dataKey: 'ship_carrier' }, // 翻译
+      { header: t('field.ship_desc'), dataKey: 'ship_desc' }, // 翻译
+      { header: t('field.return_policy'), dataKey: 'return_policy' }, // 翻译
+      { header: t('field.security_privacy'), dataKey: 'security_privacy' }, // 翻译
+      { header: t('field.dropship_desc'), dataKey: 'dropship_desc' }, // 翻译
+      { header: t('field.title'), dataKey: 'title' }, // 翻译
+      { header: t('field.short_desc'), dataKey: 'short_desc' }, // 翻译
+      { header: t('field.long_desc'), dataKey: 'long_desc' }, // 翻译
+      { header: t('field.dropship_listing_title'), dataKey: 'dropship_listing_title' }, // 翻译
+      { header: t('field.dropship_short_desc'), dataKey: 'dropship_short_desc' }, // 翻译
+      { header: t('field.dropship_long_desc'), dataKey: 'dropship_long_desc' }, // 翻译
+      { header: t('field.keywords'), dataKey: 'keywords' }, // 翻译
+      { header: t('field.google_product_category'), dataKey: 'google_product_category' }, // 翻译
+      { header: t('field.google_product_type'), dataKey: 'google_product_type' }, // 翻译
+      { header: t('field.facebook_product_category'), dataKey: 'facebook_product_category' }, // 翻译
+      { header: t('field.color_map'), dataKey: 'color_map' }, // 翻译
+      { header: t('field.key_features_1'), dataKey: 'key_features_1' }, // 翻译
+      { header: t('field.key_features_2'), dataKey: 'key_features_2' }, // 翻译
+      { header: t('field.key_features_3'), dataKey: 'key_features_3' }, // 翻译
+      { header: t('field.key_features_4'), dataKey: 'key_features_4' }, // 翻译
+      { header: t('field.key_features_5'), dataKey: 'key_features_5' }, // 翻译
+      { header: t('field.main_image'), dataKey: 'main_image' }, // 翻译
+      { header: t('field.front_image'), dataKey: 'front_image' }, // 翻译
+      { header: t('field.back_image'), dataKey: 'back_image' }, // 翻译
+      { header: t('field.side_image'), dataKey: 'side_image' }, // 翻译
+      { header: t('field.detail_image'), dataKey: 'detail_image' }, // 翻译
+      { header: t('field.full_image'), dataKey: 'full_image' }, // 翻译
+      { header: t('field.thumbnail_image'), dataKey: 'thumbnail_image' }, // 翻译
+      { header: t('field.size_chart_image'), dataKey: 'size_chart_image' }, // 翻译
+      { header: t('field.swatch_image'), dataKey: 'swatch_image' }, // 翻译
+      { header: t('field.additional_image_1'), dataKey: 'additional_image_1' }, // 翻译
+      { header: t('field.additional_image_2'), dataKey: 'additional_image_2' }, // 翻译
+      { header: t('field.additional_image_3'), dataKey: 'additional_image_3' }, // 翻译
+      { header: t('field.main_video'), dataKey: 'main_video' }, // 翻译
+      { header: t('field.additional_video_1'), dataKey: 'additional_video_1' }, // 翻译
+      { header: t('field.material_name_1'), dataKey: 'material_name_1' }, // 翻译
+      { header: t('field.material_1_percentage'), dataKey: 'material_1_percentage' }, // 翻译
+      { header: t('field.material_name_2'), dataKey: 'material_name_2' }, // 翻译
+      { header: t('field.material_2_percentage'), dataKey: 'material_2_percentage' }, // 翻译
+      { header: t('field.material_name_3'), dataKey: 'material_name_3' }, // 翻译
+      { header: t('field.material_3_percentage'), dataKey: 'material_3_percentage' }, // 翻译
+      { header: t('field.material_name_4'), dataKey: 'material_name_4' }, // 翻译
+      { header: t('field.material_4_percentage'), dataKey: 'material_4_percentage' }, // 翻译
+      { header: t('field.material_name_5'), dataKey: 'material_name_5' }, // 翻译
+      { header: t('field.material_5_percentage'), dataKey: 'material_5_percentage' }, // 翻译
+      { header: t('field.additional_color_1'), dataKey: 'additional_color_1' }, // 翻译
+      { header: t('field.additional_color_2'), dataKey: 'additional_color_2' }, // 翻译
     ];
 
     const dataToExport = selectedRowKeys.length > 0
@@ -595,7 +608,7 @@ const App = () => {
       : dataSource;
 
     if (dataToExport.length === 0) {
-      message.warning('No data to export.');
+      message.warning(t('messages.noDataToExport')); // 翻译
       return;
     }
 
@@ -615,9 +628,9 @@ const App = () => {
         } else if (field.type === 'booleanToLabel') {
           const valStr = String(sku[field.dataKey]).toLowerCase();
           if (valStr === 'true') {
-              value = 'Yes';
+              value = 'Yes'; // 保持英文，因为 Excel 通常不需要翻译
           } else if (valStr === 'false') {
-              value = 'No';
+              value = 'No'; // 保持英文
           } else {
               value = sku[field.dataKey];
           }
@@ -634,7 +647,7 @@ const App = () => {
     const now = new Date();
     const timestamp = `${now.getFullYear().toString().slice(-2)}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}${now.getSeconds().toString().padStart(2, '0')}`;
     XLSX.writeFile(workbook, `skus_${timestamp}.xlsx`);
-    message.success('SKU data exported successfully!');
+    message.success(t('messages.skuExported')); // 翻译
   };
 
   const handleCsvUpload = async (options) => {
@@ -644,24 +657,24 @@ const App = () => {
     try {
       const response = await uploadSkuCsv(file);
       onSuccess(response, file);
-      message.success(`${file.name} uploaded and processed successfully!`);
+      message.success(t('messages.csvUploadSuccess', { fileName: file.name })); // 翻译
       fetchSkusWithHandling();
     } catch (error) {
       console.error("CSV Upload failed:", error);
-      let errorMessage = `Failed to upload ${file.name}: `;
+      let errorMessage = `${t('messages.csvUploadFailed', { fileName: file.name })}`; // 翻译
       if (error.fieldErrors && Array.isArray(error.fieldErrors)) {
         const detailedErrors = error.fieldErrors.map(fe => {
-          const fieldName = fe.loc && fe.loc.length > 1 ? fe.loc[fe.loc.length -1] : 'Unknown field';
+          const fieldName = fe.loc && fe.loc.length > 1 ? fe.loc[fe.loc.length -1] : t('messages.unknownField'); // 翻译
           return `${fieldName}: ${fe.msg}`;
         }).join('; ');
-        errorMessage += `Validation errors: ${detailedErrors}`;
-         setErrorMessages(prev => [...prev, `Validation errors in ${file.name}: ${detailedErrors}`]);
+        errorMessage += `${t('messages.validationErrors')}${detailedErrors}`; // 翻译
+         setErrorMessages(prev => [...prev, `${t('messages.validationErrorsInFile', { fileName: file.name })}: ${detailedErrors}`]); // 翻译
       } else if (error.message) {
         errorMessage += error.message;
-         setErrorMessages(prev => [...prev, `Upload error for ${file.name}: ${error.message}`]);
+         setErrorMessages(prev => [...prev, `${t('messages.uploadError', { fileName: file.name })}: ${error.message}`]); // 翻译
       } else {
-        errorMessage += 'Unknown error during upload.';
-        setErrorMessages(prev => [...prev, `Upload error for ${file.name}: Unknown error.`]);
+        errorMessage += t('messages.unknownUploadError', { fileName: file.name }); // 翻译
+        setErrorMessages(prev => [...prev, `${t('messages.unknownUploadError', { fileName: file.name })}`]); // 翻译
       }
       onError(error);
       message.error(errorMessage, 10);
@@ -686,22 +699,38 @@ const App = () => {
   }
 
   return (
-    <ConfigProvider locale={zhCN}>
+    <ConfigProvider locale={antdLocales[i18n.language]}> {/* 根据当前语言动态设置 Ant Design Locale */}
       <div className="App">
         <div className="header-container">
             <div className="logo-title-container">
                 <img src={JFJPLogo} alt="JFJP Logo" className="header-logo" />
-                <h1 className="header-title">SKU Management System</h1>
+                <h1 className="header-title">{t('systemTitle')}</h1> {/* 翻译 */}
             </div>
             <div className="header-right">
-                <span className="language-selector">EN / 中文</span>
-                <Button onClick={handleLogout} type="default">退出登录</Button>
+                {/* 语言切换按钮 */}
+                <Space className="language-selector">
+                    <Button
+                        type={i18n.language === 'en' ? 'primary' : 'default'} // 当前语言高亮
+                        onClick={() => i18n.changeLanguage('en')}
+                        size="small"
+                    >
+                        EN
+                    </Button>
+                    <Button
+                        type={i18n.language === 'zh' ? 'primary' : 'default'} // 当前语言高亮
+                        onClick={() => i18n.changeLanguage('zh')}
+                        size="small"
+                    >
+                        中文
+                    </Button>
+                </Space>
+                <Button onClick={handleLogout} type="default">{t('logout')}</Button> {/* 翻译 */}
             </div>
         </div>
 
         {errorMessages.length > 0 && (
           <Alert
-            message="Operation Information / Errors"
+            message={t('operationInfoErrors')}
             description={
               <ul style={{ maxHeight: '150px', overflowY: 'auto' }}>
                 {errorMessages.map((msg, index) => (
@@ -718,7 +747,7 @@ const App = () => {
         <div className="table-actions-container">
             <Space className="table-top-buttons">
                 <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingSku(null); setIsModalOpen(true); }}>
-                    Create SKU (Modal)
+                    {t('createSkuModal')} {/* 翻译 */}
                 </Button>
                 <Upload
                     ref={fileInputRef}
@@ -726,16 +755,16 @@ const App = () => {
                     showUploadList={false}
                     accept=".csv"
                 >
-                    <Button icon={<UploadOutlined />}>Upload CSV</Button>
+                    <Button icon={<UploadOutlined />}>{t('uploadCsv')}</Button> {/* 翻译 */}
                 </Upload>
                 <Button icon={<ExportOutlined />} onClick={handleExport}>
-                    Export All
+                    {t('exportAll')} {/* 翻译 */}
                 </Button>
             </Space>
             <div className="search-bar-container">
                 <Input
                     prefix={<SearchOutlined />}
-                    placeholder="Search by SKU, UPC, or Name"
+                    placeholder={t('searchPlaceholder')}
                     value={searchText}
                     onChange={e => setSearchText(e.target.value)}
                     style={{ width: 300 }}
@@ -762,12 +791,12 @@ const App = () => {
                 pageSizeOptions: ['15', '20', '50', '100', '200'],
                 showSizeChanger: true,
                 defaultPageSize: 15,
-                showTotal: (total, range) => `${range[0]}-${range[1]} / ${total} 条`,
+                showTotal: (total, range) => `${range[0]}-${range[1]} / ${total} ${t('common.records')}`, // 翻译
               }}
             footer={() => (
               <div style={{ textAlign: 'center' }}>
                 <Button type="default" icon={<PlusOutlined />} onClick={handleAddInline}>
-                  Add New SKU (Inline)
+                  {t('tableFooterAddInline')} {/* 翻译 */}
                 </Button>
               </div>
             )}

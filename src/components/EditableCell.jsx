@@ -1,7 +1,8 @@
 // src/components/EditableCell.jsx
 import React from 'react';
 import { Form, Input, InputNumber, Select } from 'antd';
-import { fieldsConfig, statusOptions, conditionOptions } from './fieldConfig'; // 引入 fieldConfig
+import { fieldsConfig, statusOptions, conditionOptions } from './fieldConfig';
+import { useTranslation } from 'react-i18next'; // 引入 useTranslation
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -11,11 +12,13 @@ const EditableCell = ({
   dataIndex,
   title,
   inputType,
-  record, // record 现在代表原始数据，不是编辑中的实时数据
+  record,
   index,
   children,
   ...restProps
 }) => {
+  const { t } = useTranslation(); // 使用 useTranslation 钩子
+
   // 根据 dataIndex 从 fieldConfig 中找到对应的字段配置
   const field = fieldsConfig.find(f => f.name === dataIndex);
 
@@ -23,15 +26,25 @@ const EditableCell = ({
   const rules = field?.validation ?
     Object.entries(field.validation).reduce((acc, [key, value]) => {
       if (key === 'required' && value) {
-        acc.push({ required: true, message: field.validation.requiredMsg || `${field.label} is required!` });
+        // 翻译 requiredMsg，并传递 label 参数
+        acc.push({ required: true, message: t(field.validation.requiredMsg, { label: t(field.label) }) });
       } else if (key === 'pattern' && value) {
-        acc.push({ pattern: value, message: field.validation.patternMsg || 'Invalid format!' });
+        // 对于 patternMsg，需要根据实际内容判断是否需要传递参数
+        const patternMsgKey = field.validation.patternMsg;
+        let messageParams = {};
+        if (patternMsgKey === 'validation.generalPattern' || patternMsgKey === 'validation.maxCharacters') {
+          messageParams = { count: field.validation.maxLength };
+        }
+        acc.push({ pattern: value, message: t(patternMsgKey, messageParams) });
       } else if (key === 'maxLength' && value) {
-        acc.push({ max: value, message: field.validation.maxLengthMsg || `Max ${value} characters!` });
+        // 翻译 maxLengthMsg，并传递 count 参数
+        acc.push({ max: value, message: t(field.validation.maxLengthMsg, { count: value }) });
       } else if (key === 'min' && value !== undefined && (field.type === 'number' || field.isFee)) {
-        acc.push({ type: 'number', min: value, message: field.validation.minMsg || `Cannot be less than ${value}!` });
+        // 翻译 minMsg，并传递 value 参数
+        acc.push({ type: 'number', min: value, message: t(field.validation.minMsg, { value: value }) });
       } else if (key === 'max' && value !== undefined && (field.type === 'number' || field.isFee)) {
-        acc.push({ type: 'number', max: value, message: field.validation.maxMsg || `Cannot be greater than ${value}!` });
+        // 翻译 maxMsg，并传递 value 参数
+        acc.push({ type: 'number', max: value, message: t(field.validation.maxMsg, { value: value }) });
       }
       return acc;
     }, [])
@@ -56,13 +69,16 @@ const EditableCell = ({
         return <TextArea rows={field?.rows || 1} placeholder={placeholderText} />; // 行内编辑时通常不需要太多行
       case 'select':
         let optionsSource = field?.options || [];
+        // statusOptions 和 conditionOptions 的 label 已经是可读的字符串，无需再次翻译
         if (field.name === 'status') optionsSource = statusOptions;
         if (field.name === 'condition') optionsSource = conditionOptions;
-        if (field.name === 'allow_dropship_return') optionsSource = [{value: 'True', label: 'Yes'}, {value: 'False', label: 'No'}];
+        if (field.name === 'allow_dropship_return') optionsSource = [{value: 'True', label: 'Yes'}, {value: 'False', label: 'No'}]; // 这里的 Yes/No 可以考虑翻译
+
         return (
           <Select placeholder={placeholderText}>
             {optionsSource.map((opt) => (
               <Option key={opt.value} value={opt.value}>
+                {/* 如果 Select 选项的 label 也需要翻译，可以在这里 t(opt.label) */}
                 {opt.label}
               </Option>
             ))}
