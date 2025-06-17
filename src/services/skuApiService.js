@@ -1,7 +1,7 @@
 // src/services/skuApiService.js
 
 const API_BASE_URL = 'https://vp.jfj.ai/JFJP/skus';
-// const AUTH_API_BASE_URL = 'https://vp.jfj.ai/JFJP/auth'; // 注释掉：新增认证服务的根 URL
+const AUTH_API_BASE_URL = 'https://vp.jfj.ai/JFJP/auth'; // 新增认证服务的根 URL
 const AI_API_BASE_URL = 'https://vp.jfj.ai/JFJP';
 
 // 辅助函数处理 API 响应
@@ -100,26 +100,26 @@ export const generateAIDescription = async (data) => {
   return handleResponse(response);
 };
 
-// // 注释掉：新增: 用户注册 API 调用
-// export const registerUser = async (email, password) => {
-//   const response = await fetch(`${AUTH_API_BASE_URL}/register`, {
-//     method: 'POST',
-//     headers: {
-//       'Content-Type': 'application/json',
-//     },
-//     body: JSON.stringify({ email, password }),
-//   });
-//   return handleResponse(response);
-// };
+// 新增: 用户注册 API 调用
+export const registerUser = async (email, password) => {
+  const response = await fetch(`${AUTH_API_BASE_URL}/register`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email, password }),
+  });
+  return handleResponse(response);
+};
 
-// // 注释掉：新增: 用户登录 API 调用
-// export const loginUser = async (email, password) => {
-//   const response = await fetch(`${AUTH_API_BASE_URL}/login`, {
-//     method: 'POST',
-//     headers: {
-//       'Content-Type': 'application/json',
-//     },
-//     body: JSON.stringify({ email, password }),
-//   });
-//   return handleResponse(response);
-// };
+// 新增: 用户登录 API 调用
+export const loginUser = async (email, password) => {
+  const response = await fetch(`${AUTH_API_BASE_URL}/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email, password }),
+  });
+  return handleResponse(response);
+};
