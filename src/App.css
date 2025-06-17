@@ -63,38 +63,24 @@
 .logo-title-container {
   display: flex;
   align-items: center;
-  /* 确保 Logo 和标题的垂直对齐 */
-  vertical-align: baseline;
 }
 
 .header-logo {
-  height: 55px; /* 进一步增大 Logo 大小 */
-  margin-right: 15px; /* 增加 Logo 和标题的间距 */
-  vertical-align: middle;
+  height: 40px; /* 调整 Logo 大小以匹配图片 */
+  margin-right: 10px;
 }
 
 .header-title {
-  color: #333;
+  color: #333; /* 调整标题颜色 */
   margin: 0;
-  font-size: 30px; /* 增大字体大小以匹配视觉长度 */
+  font-size: 24px; /* 调整标题字体大小 */
   font-weight: 500;
-  line-height: 1.2;
-  /* 对于英文，可以尝试增加字母间距，使其看起来更长 */
-  /* 对于中文，可以保持默认或略微减小间距 */
-  letter-spacing: 1px; /* 增加字母间距，让英文标题看起来更宽 */
-  white-space: nowrap; /* 确保标题不换行 */
 }
-
-/* 根据语言调整 letter-spacing，这需要在 App.jsx 中动态添加类 */
-.header-title.zh {
-  letter-spacing: 0px; /* 中文标题可以保持默认或更小的间距 */
-}
-
 
 .header-right {
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 15px; /* 语言选择和退出登录按钮之间的间距 */
 }
 
 .language-selector {
@@ -106,24 +92,25 @@
 /* 表格上方操作区域 */
 .table-actions-container {
   display: flex;
+  /* 保持 justify-content: space-between; 以确保按钮组和搜索框左右对齐 */
   align-items: center;
   margin-bottom: 16px;
-  background-color: #fff;
+  background-color: #fff; /* 操作区背景色 */
   padding: 16px;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); /* 添加一些阴影效果 */
 }
 
 .table-top-buttons .ant-btn {
-  height: 32px;
+  height: 32px; /* 统一按钮高度 */
   line-height: 32px;
   padding: 0 15px;
   font-size: 14px;
 }
 
 /* 搜索框样式 */
-.search-bar-container {
-  margin-left: 40px;
+.search-bar-container { /* */
+  margin-left: 40px; 
 }
 
 .search-bar-container .ant-input-affix-wrapper {
@@ -137,7 +124,7 @@
 
 /* Ant Design Table 的一些默认样式可能需要微调 */
 .ant-table-wrapper {
-    margin-top: 20px;
+    margin-top: 20px; /* 表格与上方操作区之间的间距 */
     background-color: #fff;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
@@ -145,39 +132,39 @@
 
 /* 表格头部样式 */
 .ant-table-thead > tr > th {
-  background-color: #fafafa;
+  background-color: #fafafa; /* 表格头部背景色 */
   color: rgba(0, 0, 0, 0.85);
   font-weight: 500;
-  white-space: nowrap;
+  white-space: nowrap; /* 确保标题不换行 */
 }
 
 /* 表格内容行样式 */
 .ant-table-tbody > tr > td {
-  white-space: nowrap;
+  white-space: nowrap; /* 确保表格内容不换行 */
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 /* 分页器样式 */
 .ant-pagination {
-    margin-top: 16px;
-    text-align: right;
+    margin-top: 16px; /* 分页器与表格之间的间距 */
+    text-align: right; /* 图片中分页器在右侧 */
 }
 
 .ant-pagination-options {
-  margin-left: 10px;
+  margin-left: 10px; /* 调整分页器选项间距 */
 }
 
 /* 错误提示 */
 .ant-alert-error {
-  background-color: #fff0f6;
+  background-color: #fff0f6; /* 更柔和的错误背景色 */
   border-color: #ffadd2;
   color: #ff4d4f;
 }
 
 /* Modal 内部的样式调整 */
 .ant-modal-body .ant-form-item-label > label {
-  font-weight: 500;
+  font-weight: 500; /* 模态框中表单项的标签加粗 */
 }
 
 /* 确保 EditableCell 内部的 Form.Item 不带额外边距 */

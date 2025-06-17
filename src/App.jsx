@@ -1,7 +1,7 @@
 // src/App.jsx
 import { useState, useEffect, useRef } from 'react';
 import './App.css';
-import { Table, ConfigProvider, Button, message, Upload, Space, Popconfirm, Alert, Form, Input } from 'antd'; // 导入 Space 组件
+import { Table, ConfigProvider, Button, message, Upload, Space, Popconfirm, Alert, Form, Input } from 'antd';
 import * as XLSX from 'xlsx';
 import { fieldsConfig, statusOptions, conditionOptions } from './components/fieldConfig';
 import { UploadOutlined, EditOutlined, DeleteOutlined, PlusOutlined, ExportOutlined, SaveOutlined, CloseOutlined, EyeOutlined, SearchOutlined } from '@ant-design/icons';
@@ -200,7 +200,7 @@ const App = () => {
         if (field.name === 'id') return null;
 
         return {
-          title: t(field.label),
+          title: <div style={{ textAlign: 'center' }}>{t(field.label)}</div>,
           dataIndex: field.name,
           key: field.name,
           width: field.name === 'vendor_sku' ? 180 : (field.type === 'textarea' || field.name.toLowerCase().includes('desc') ? 250 : 150),
@@ -700,7 +700,8 @@ const App = () => {
 
   return (
     <ConfigProvider locale={antdLocales[i18n.language]}>
-      <div className="App">
+      {/* 添加 classname 根据语言动态调整表格头部对齐 */}
+      <div className={`App ${i18n.language === 'zh' ? 'lang-zh' : ''}`}>
         <div className="header-container">
             <div className="logo-title-container">
                 <img src={JFJPLogo} alt="JFJP Logo" className="header-logo" />
