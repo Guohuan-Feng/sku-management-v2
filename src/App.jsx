@@ -1,8 +1,7 @@
 // src/App.jsx
 import { useState, useEffect, useRef } from 'react';
 import './App.css';
-// 确保 Tooltip 已导入
-import { Table, ConfigProvider, Button, message, Upload, Space, Popconfirm, Alert, Form, Input, Tooltip } from 'antd';
+import { Table, ConfigProvider, Button, message, Upload, Space, Popconfirm, Alert, Form, Input } from 'antd';
 import * as XLSX from 'xlsx';
 import { fieldsConfig, statusOptions, conditionOptions } from './components/fieldConfig';
 import { UploadOutlined, EditOutlined, DeleteOutlined, PlusOutlined, ExportOutlined, SaveOutlined, CloseOutlined, EyeOutlined, SearchOutlined } from '@ant-design/icons';
@@ -185,7 +184,6 @@ const App = () => {
   };
 
   const getTableColumns = () => {
-    // 强制按照图片所示的顺序进行字段排列
     const orderedDisplayFields = [
       'vendor_sku', 'UPC', 'product_en_name', 'product_cn_name',
       'dropship_price', 'brand',
@@ -201,38 +199,16 @@ const App = () => {
       .map((field) => {
         if (field.name === 'id') return null;
 
-        // 根据字段名调整宽度，并为长文本字段添加 Tooltip
-        let columnWidth = 150; // 默认宽度
-        if (field.name === 'vendor_sku' || field.name === 'UPC') {
-            columnWidth = 180; // SKU 和 UPC 适当宽一些
-        } else if (field.name === 'product_en_name' || field.name === 'product_cn_name') {
-            // 进一步增加产品名称的宽度，尝试解决遮挡问题
-            columnWidth = 280;
-        } else if (field.type === 'textarea' || field.name.toLowerCase().includes('desc') || field.name.toLowerCase().includes('image') || field.name.toLowerCase().includes('video') || field.name.toLowerCase().includes('features')) {
-            columnWidth = 250; // 描述、图片/视频URL、关键特性给更多宽度
-        } else if (field.isFee || field.type === 'number') {
-            columnWidth = 120; // 价格和数字字段可以窄一些
-        }
-
         return {
-          // 表头标题的渲染，添加 Tooltip
-          title: (
-            <div style={{ textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              <Tooltip title={t(field.label)}>
-                {t(field.label)}
-              </Tooltip>
-            </div>
-          ),
+          title: <div style={{ textAlign: 'center' }}>{t(field.label)}</div>,
           dataIndex: field.name,
           key: field.name,
-          width: columnWidth, // 应用计算出的宽度
-          fixed: field.name === 'vendor_sku' ? 'left' : undefined, // Vendor SKU 固定在左侧
-          ellipsis: {
-            showTitle: false, // 禁用默认的 title 属性，我们用 Tooltip
-          },
+          width: field.name === 'vendor_sku' ? 180 : (field.type === 'textarea' || field.name.toLowerCase().includes('desc') ? 250 : 150),
+          fixed: field.name === 'vendor_sku' ? 'left' : undefined,
+          ellipsis: true,
           render: (text, record) => {
             const editable = isEditing(record);
-            const content = editable ? (
+            return editable ? (
               <EditableCell
                 editing={editable}
                 dataIndex={field.name}
@@ -243,11 +219,8 @@ const App = () => {
                 {text}
               </EditableCell>
             ) : (
-              // 当非编辑状态且有内容时，添加 Tooltip 显示完整文本
-              // 检查 text 是否存在，避免 Tooltip 显示空的提示
-              text ? <Tooltip title={text}>{text}</Tooltip> : text
+              text
             );
-            return content;
           },
           onCell: (record) => ({
             record,
@@ -400,11 +373,9 @@ const App = () => {
     setErrorMessages([]);
     let successCount = 0;
     const currentErrors = [];
-    // 1. 在循环开始前创建 newSelectedRowKeys 的副本
-    const keysToProcess = [...selectedRowKeys];
-    let newSelectedRowKeysAfterDeletion = [...selectedRowKeys];
+    const remainingSelectedKeys = [...selectedRowKeys];
 
-    for (const skuKey of keysToProcess) { // 遍历 keysToProcess 确保不受 newSelectedRowKeysAfterDeletion 变化的影响
+    for (const skuKey of selectedRowKeys) {
       try {
         if (editingKey === skuKey && String(skuKey).startsWith('new-temp-id')) {
           setDataSource(prevDs => prevDs.filter(item => item.key !== skuKey));
@@ -413,15 +384,13 @@ const App = () => {
             setEditingRowData({});
           }
           successCount++;
-          // 2. 成功处理后，从 newSelectedRowKeysAfterDeletion 中移除该 key
-          newSelectedRowKeysAfterDeletion = newSelectedRowKeysAfterDeletion.filter(k => k !== skuKey);
+          remainingSelectedKeys.splice(remainingSelectedKeys.indexOf(skuKey), 1);
         } else {
           const skuToDelete = dataSource.find(item => item.key === skuKey);
           if (skuToDelete && !String(skuToDelete.id).startsWith('new-temp-id')) {
             await deleteSku(skuToDelete.id);
             successCount++;
-            // 2. 成功处理后，从 newSelectedRowKeysAfterDeletion 中移除该 key
-            newSelectedRowKeysAfterDeletion = newSelectedRowKeysAfterDeletion.filter(k => k !== skuKey);
+            remainingSelectedKeys.splice(remainingSelectedKeys.indexOf(skuKey), 1);
           } else {
              currentErrors.push(t('messages.skuIDNotFoundOrTemp', { key: skuKey }));
           }
@@ -440,10 +409,10 @@ const App = () => {
       setErrorMessages(prev => [...prev, ...currentErrors]);
       message.error(t('tableOperations.deleteSelectedError', { count: currentErrors.length }));
     }
-    // 无论是否有成功删除，都重新获取数据，确保数据同步
-    fetchSkusWithHandling();
-    // 3. 更新 selectedRowKeys
-    setSelectedRowKeys(newSelectedRowKeysAfterDeletion);
+    if (successCount > 0 || selectedRowKeys.some(key => String(key).startsWith('new-temp-id'))) {
+         fetchSkusWithHandling();
+    }
+    setSelectedRowKeys(remainingSelectedKeys);
   };
 
   const handleModalSubmit = async (values, initialDataParam) => {
@@ -691,7 +660,7 @@ const App = () => {
       let errorMessage = `${t('messages.csvUploadFailed', { fileName: file.name })}`;
       if (error.fieldErrors) {
         const detailedErrors = error.fieldErrors.map(fe => {
-          const fieldName = fe.loc && fe.loc.length > 1 ? fe.loc[fe.loc.length - 1] : t('messages.unknownField');
+          const fieldName = fe.loc && fe.loc.length > 1 ? fe.loc[fe.loc.length -1] : t('messages.unknownField');
           return `${fieldName}: ${fe.msg}`;
         }).join('; ');
         errorMessage += `${t('messages.validationErrors')}${detailedErrors}`;
@@ -808,7 +777,6 @@ const App = () => {
             columns={getTableColumns()}
             dataSource={filteredDataSource}
             loading={loading}
-            // 确保 scroll.x 足够大以容纳所有列，避免挤压
             scroll={{ x: 'max-content', y: '60vh' }}
             bordered
             rowKey="key"
