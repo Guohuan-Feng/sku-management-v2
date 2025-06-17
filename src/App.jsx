@@ -1,14 +1,14 @@
 // src/App.jsx
 import { useState, useEffect, useRef } from 'react';
 import './App.css';
-import { Table, ConfigProvider, Button, message, Upload, Space, Popconfirm, Alert, Form, Input } from 'antd'; // 导入 Space 组件
-import * as XLSX from 'xlsx';
-import { fieldsConfig, statusOptions, conditionOptions } from './components/fieldConfig';
-import { UploadOutlined, EditOutlined, DeleteOutlined, PlusOutlined, ExportOutlined, SaveOutlined, CloseOutlined, EyeOutlined, SearchOutlined } from '@ant-design/icons';
-import SkuFormModal from './components/SkuFormModal';
-import EditableCell from './components/EditableCell';
-import { getAllSkus, createSku, updateSku, deleteSku, uploadSkuCsv } from './services/skuApiService';
-import AuthForm from './components/AuthForm';
+import { Table, ConfigProvider, Button, message, Upload, Space, Popconfirm, Alert, Form, Input } from 'antd'; // 导入 Ant Design 组件
+import * as XLSX from 'xlsx'; // 导入 XLSX 库用于 Excel 文件操作
+import { fieldsConfig, statusOptions, conditionOptions } from './components/fieldConfig'; // 导入字段配置、状态和条件选项
+import { UploadOutlined, EditOutlined, DeleteOutlined, PlusOutlined, ExportOutlined, SaveOutlined, CloseOutlined, EyeOutlined, SearchOutlined } from '@ant-design/icons'; // 导入 Ant Design 图标
+import SkuFormModal from './components/SkuFormModal'; // 导入 SKU 表单模态框组件
+import EditableCell from './components/EditableCell'; // 导入可编辑单元格组件
+import { getAllSkus, createSku, updateSku, deleteSku, uploadSkuCsv } from './services/skuApiService'; // 导入 SKU 相关的 API 服务
+// import AuthForm from './components/AuthForm'; // 注释掉：导入认证表单组件
 
 // 导入 Ant Design 语言包
 import enUS from 'antd/locale/en_US';
@@ -22,7 +22,7 @@ import JFJPLogo from '/JFJP_logo.png';
 
 const App = () => {
   const { t, i18n } = useTranslation();
-  const [form] = Form.useForm();
+  const [form] = Form.useForm(); // 创建 Ant Design Form 实例，用于行内编辑
   const [dataSource, setDataSource] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
@@ -39,8 +39,8 @@ const App = () => {
   const [viewingSku, setViewingSku] = useState(null);
   const [searchText, setSearchText] = useState('');
 
-  // 新增登录状态
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  // // 注释掉：新增登录状态
+  // const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   // Ant Design 语言包映射
   const antdLocales = {
@@ -48,13 +48,14 @@ const App = () => {
     zh: zhCN,
   };
 
-  // 检查本地存储中的 token，判断用户是否已登录
+  // // 注释掉：检查本地存储中的 token，判断用户是否已登录
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      setIsLoggedIn(true);
-      fetchSkusWithHandling();
-    }
+    // const token = localStorage.getItem('access_token');
+    // if (token) {
+    //   setIsLoggedIn(true);
+    //   fetchSkusWithHandling();
+    // }
+    fetchSkusWithHandling(); // 直接调用 SKU 获取，不再依赖登录状态
   }, []);
 
   const handleInlineFormValuesChange = (changedValues, allValues) => {
@@ -78,18 +79,20 @@ const App = () => {
     }
   };
 
-  const handleAuthSuccess = () => {
-    setIsLoggedIn(true);
-    fetchSkusWithHandling();
-    message.success(t('messages.loggedIn'));
-  };
+  // // 注释掉：认证成功后的回调函数
+  // const handleAuthSuccess = () => {
+  //   setIsLoggedIn(true);
+  //   fetchSkusWithHandling();
+  //   message.success(t('messages.loggedIn'));
+  // };
 
-  const handleLogout = () => {
-    localStorage.removeItem('access_token');
-    setIsLoggedIn(false);
-    setDataSource([]);
-    message.info(t('messages.loggedOut'));
-  };
+  // // 注释掉：退出登录处理函数
+  // const handleLogout = () => {
+  //   localStorage.removeItem('access_token');
+  //   setIsLoggedIn(false);
+  //   setDataSource([]);
+  //   message.info(t('messages.loggedOut'));
+  // };
 
   const isEditing = (record) => record.key === editingKey;
 
@@ -558,10 +561,10 @@ const App = () => {
       { header: t('field.title'), dataKey: 'title' },
       { header: t('field.short_desc'), dataKey: 'short_desc' },
       { header: t('field.long_desc'), dataKey: 'long_desc' },
+      { header: t('field.keywords'), dataKey: 'keywords' },
       { header: t('field.dropship_listing_title'), dataKey: 'dropship_listing_title' },
       { header: t('field.dropship_short_desc'), dataKey: 'dropship_short_desc' },
       { header: t('field.dropship_long_desc'), dataKey: 'dropship_long_desc' },
-      { header: t('field.keywords'), dataKey: 'keywords' },
       { header: t('field.google_product_category'), dataKey: 'google_product_category' },
       { header: t('field.google_product_type'), dataKey: 'google_product_type' },
       { header: t('field.facebook_product_category'), dataKey: 'facebook_product_category' },
@@ -694,9 +697,10 @@ const App = () => {
     i18n.changeLanguage(newLang);
   };
 
-  if (!isLoggedIn) {
-    return <AuthForm onAuthSuccess={handleAuthSuccess} />;
-  }
+  // // 注释掉：如果未登录，则渲染 AuthForm
+  // if (!isLoggedIn) {
+  //   return <AuthForm onAuthSuccess={handleAuthSuccess} />;
+  // }
 
   return (
     <ConfigProvider locale={antdLocales[i18n.language]}>
@@ -716,7 +720,8 @@ const App = () => {
                         {i18n.language === 'en' ? '中文' : 'EN'}
                     </Button>
                 </Space>
-                <Button onClick={handleLogout} type="default">{t('logout')}</Button>
+                {/* // 注释掉：退出登录按钮 */}
+                {/* <Button onClick={handleLogout} type="default">{t('logout')}</Button> */}
             </div>
         </div>
 
