@@ -70,8 +70,8 @@ const App = () => {
       message.success(t('messages.skuDataLoaded'));
     } catch (error) {
       console.error("Failed to fetch SKUs:", error);
-      message.error(`${t('messages.failedToFetchSkus')}${error.message}`);
-      setErrorMessages(prev => [...prev, `${t('messages.failedToFetchSkus')}${error.message}`]);
+      message.error(`<span class="math-inline">\{t\('messages\.failedToFetchSkus'\)\}</span>{error.message}`);
+      setErrorMessages(prev => [...prev, `<span class="math-inline">\{t\('messages\.failedToFetchSkus'\)\}</span>{error.message}`]);
       setDataSource([]);
     } finally {
       setLoading(false);
@@ -357,7 +357,7 @@ const App = () => {
       setSelectedRowKeys(prevKeys => prevKeys.filter(k => k !== skuIdToDelete));
     } catch (error) {
       console.error('Failed to delete SKU:', error);
-      message.error(`${t('tableOperations.deleteError')}${error.message}`);
+      message.error(`<span class="math-inline">\{t\('tableOperations\.deleteError'\)\}</span>{error.message}`);
       setErrorMessages(prev => [...prev, `${t('tableOperations.deleteError')}ID ${skuIdToDelete}: ${error.message}`]);
     } finally {
       setLoading(false);
@@ -641,7 +641,7 @@ const App = () => {
     XLSX.utils.book_append_sheet(workbook, worksheet, 'SKUs');
 
     const now = new Date();
-    const timestamp = `${now.getFullYear().toString().slice(-2)}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}${now.getSeconds().toString().padStart(2, '0')}`;
+    const timestamp = `<span class="math-inline">\{now\.getFullYear\(\)\.toString\(\)\.slice\(\-2\)\}</span>{(now.getMonth() + 1).toString().padStart(2, '0')}<span class="math-inline">\{now\.getDate\(\)\.toString\(\)\.padStart\(2, '0'\)\}\_</span>{now.getHours().toString().padStart(2, '0')}<span class="math-inline">\{now\.getMinutes\(\)\.toString\(\)\.padStart\(2, '0'\)\}</span>{now.getSeconds().toString().padStart(2, '0')}`;
     XLSX.writeFile(workbook, `skus_${timestamp}.xlsx`);
     message.success(t('messages.skuExported'));
   };
@@ -663,7 +663,7 @@ const App = () => {
           const fieldName = fe.loc && fe.loc.length > 1 ? fe.loc[fe.loc.length -1] : t('messages.unknownField');
           return `${fieldName}: ${fe.msg}`;
         }).join('; ');
-        errorMessage += `${t('messages.validationErrors')}${detailedErrors}`;
+        errorMessage += `<span class="math-inline">\{t\('messages\.validationErrors'\)\}</span>{detailedErrors}`;
          setErrorMessages(prev => [...prev, `${t('messages.validationErrorsInFile', { fileName: file.name })}: ${detailedErrors}`]);
       } else if (error.message) {
         errorMessage += error.message;
@@ -708,6 +708,15 @@ const App = () => {
                 <h1 className={`header-title ${i18n.language === 'zh' ? 'zh' : ''}`}>{t('systemTitle')}</h1> {/* 添加动态类名 */}
             </div>
             <div className="header-right">
+                {/* 新增官网链接 */}
+                <a
+                    href="https://xuanzi2023.wixsite.com/jfjp"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ marginRight: '15px', color: '#666', textDecoration: 'none' }}
+                >
+                    {t('officialWebsite')}
+                </a>
                 {/* 语言切换按钮 */}
                 <Space className="language-selector">
                     <Button
@@ -785,7 +794,7 @@ const App = () => {
                 pageSizeOptions: ['15', '20', '50', '100', '200'],
                 showSizeChanger: true,
                 defaultPageSize: 15,
-                showTotal: (total, range) => `${range[0]}-${range[1]} / ${total} ${t('common.records')}`,
+                showTotal: (total, range) => `<span class="math-inline">\{range\[0\]\}\-</span>{range[1]} / ${total} ${t('common.records')}`,
               }}
             footer={() => (
               <div style={{ textAlign: 'center' }}>
@@ -818,6 +827,10 @@ const App = () => {
           apiFieldErrors={formApiFieldErrors}
           showAllMode={true}
         />
+        {/* 现有版权信息 */}
+        <footer style={{ textAlign: 'center', marginTop: '20px', color: '#888' }}>
+          © {new Date().getFullYear()} by JFJP.
+        </footer>
       </div>
     </ConfigProvider>
   );

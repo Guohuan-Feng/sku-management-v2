@@ -1,8 +1,13 @@
 // src/services/skuApiService.js
 
 const API_BASE_URL = 'https://vp.jfj.ai/JFJP/skus';
-const AUTH_API_BASE_URL = 'https://vp.jfj.ai/JFJP/auth'; // 新增认证服务的根 URL
+const AUTH_API_BASE_URL = 'https://vp.jfj.ai/JFJP/auth';
 const AI_API_BASE_URL = 'https://vp.jfj.ai/JFJP';
+
+// 从环境变量中获取自定义密钥
+// 假设你的环境变量名为 VITE_CUSTOM_SECRET_KEY
+// 请确保你在 .env 文件中定义了 VITE_CUSTOM_SECRET_KEY=D5AbZ2aUBJ0NSJP2Gm!Bk02
+const CUSTOM_SECRET_VALUE = import.meta.env.VITE_CUSTOM_SECRET_KEY;
 
 // 辅助函数处理 API 响应
 const handleResponse = async (response) => {
@@ -38,9 +43,23 @@ const handleResponse = async (response) => {
   return response.json();
 };
 
+// 辅助函数，用于获取包含通用 header 的 fetch 选项
+const getAuthHeaders = () => {
+  const headers = {
+    'Content-Type': 'application/json',
+  };
+  if (CUSTOM_SECRET_VALUE) {
+    headers['X-Custom-Secret'] = CUSTOM_SECRET_VALUE; // header 名称保持为 "X-Custom-Secret"
+  }
+  return headers;
+};
+
+
 // 获取所有 SKU 的 API 调用
 export const getAllSkus = async () => {
-  const response = await fetch(`${API_BASE_URL}/get-all-sku`);
+  const response = await fetch(`${API_BASE_URL}/get-all-sku`, {
+    headers: getAuthHeaders(),
+  });
   return handleResponse(response);
 };
 
@@ -48,9 +67,7 @@ export const getAllSkus = async () => {
 export const createSku = async (skuData) => {
   const response = await fetch(`${API_BASE_URL}/create-sku`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: getAuthHeaders(),
     body: JSON.stringify(skuData),
   });
   return handleResponse(response);
@@ -60,9 +77,7 @@ export const createSku = async (skuData) => {
 export const updateSku = async (skuId, skuData) => {
   const response = await fetch(`${API_BASE_URL}/update/${skuId}`, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: getAuthHeaders(),
     body: JSON.stringify(skuData),
   });
   return handleResponse(response);
@@ -72,6 +87,7 @@ export const updateSku = async (skuId, skuData) => {
 export const deleteSku = async (skuId) => {
   const response = await fetch(`${API_BASE_URL}/delete/${skuId}`, {
     method: 'DELETE',
+    headers: getAuthHeaders(),
   });
   return handleResponse(response);
 };
@@ -81,8 +97,16 @@ export const uploadSkuCsv = async (file) => {
   const formData = new FormData();
   formData.append('file', file);
 
+  // 对于 FormData，Content-Type 通常由浏览器自动设置，不需要手动设置 'application/json'
+  // 因此，这里的 headers 只需要包含自定义密钥
+  const headers = {};
+  if (CUSTOM_SECRET_VALUE) {
+      headers['X-Custom-Secret'] = CUSTOM_SECRET_VALUE; // header 名称保持为 "X-Custom-Secret"
+  }
+
   const response = await fetch(`${API_BASE_URL}/uploads`, {
     method: 'POST',
+    headers: headers, // 传递手动创建的 headers
     body: formData,
   });
   return handleResponse(response);
@@ -92,9 +116,7 @@ export const uploadSkuCsv = async (file) => {
 export const generateAIDescription = async (data) => {
   const response = await fetch(`${AI_API_BASE_URL}/AI-generate-desc`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: getAuthHeaders(),
     body: JSON.stringify(data),
   });
   return handleResponse(response);
@@ -104,9 +126,7 @@ export const generateAIDescription = async (data) => {
 export const registerUser = async (email, password) => {
   const response = await fetch(`${AUTH_API_BASE_URL}/register`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: getAuthHeaders(),
     body: JSON.stringify({ email, password }),
   });
   return handleResponse(response);
@@ -116,9 +136,7 @@ export const registerUser = async (email, password) => {
 export const loginUser = async (email, password) => {
   const response = await fetch(`${AUTH_API_BASE_URL}/login`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: getAuthHeaders(),
     body: JSON.stringify({ email, password }),
   });
   return handleResponse(response);

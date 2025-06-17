@@ -3,6 +3,7 @@
       "systemTitle": "SKU MANAGEMENT SYSTEM",
       "languageSwitch": "EN / 中文",
       "logout": "Logout",
+      "officialWebsite": "Official Website", 
       "operationInfoErrors": "Operation Information / Errors",
       "createSkuModal": "Create SKU (Modal)",
       "uploadCsv": "Upload CSV",
