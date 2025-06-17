@@ -658,7 +658,7 @@ const App = () => {
     } catch (error) {
       console.error("CSV Upload failed:", error);
       let errorMessage = `${t('messages.csvUploadFailed', { fileName: file.name })}`;
-      if (error.fieldErrors && Array.isArray(error.fieldErrors)) {
+      if (error.fieldErrors) {
         const detailedErrors = error.fieldErrors.map(fe => {
           const fieldName = fe.loc && fe.loc.length > 1 ? fe.loc[fe.loc.length -1] : t('messages.unknownField');
           return `${fieldName}: ${fe.msg}`;
@@ -704,7 +704,7 @@ const App = () => {
         <div className="header-container">
             <div className="logo-title-container">
                 <img src={JFJPLogo} alt="JFJP Logo" className="header-logo" />
-                <h1 className="header-title">{t('systemTitle')}</h1>
+                <h1 className={`header-title ${i18n.language === 'zh' ? 'zh' : ''}`}>{t('systemTitle')}</h1> {/* 添加动态类名 */}
             </div>
             <div className="header-right">
                 {/* 语言切换按钮 */}
