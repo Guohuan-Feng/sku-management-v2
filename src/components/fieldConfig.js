@@ -34,95 +34,71 @@ export const percentageValidationPattern = /^(\d{1,2}(\.\d{1,2})?|100)$/; // For
 export const harmonizedCodePattern = /^[0-9A-Za-z.\-]+$/; // Keep this one stricter for harmonized code
 
 
-// List of mandatory field names from the CSV (UPDATED)
-// Includes original mandatory fields + newly requested mandatory fields
+// List of mandatory field names from the CSV (UPDATED based on your latest 16 items)
 const mandatoryFieldsFromCSV = [
   'vendor_sku',
-  'UPC', // 新增必填
-  'product_en_name', // 原有 Product EN Name
-  'product_cn_name', // 新增必填
+  'UPC',
+  'product_en_name',
+  'product_cn_name',
   'dropship_price',
-  'brand', // 新增必填
-  'net_weight', // 新增必填
-  'gross_weight', // 新增必填
-  'product_height', // 新增必填
-  'product_length', // 新增必填
-  'product_width', // 新增必填
-  'box_height', // 新增必填
-  'box_length', // 新增必填
-  'box_width', // 新增必填
+  'brand',
+  'net_weight',
+  'gross_weight',
+  'product_height',
+  'product_length',
+  'product_width',
+  'box_height',
+  'box_length',
+  'box_width',
   'main_image',
-  'size_chart_image', // 新增必填
-  'allow_dropship_return',
-  'condition',
-  'UOM',
-  'ship_from',
-  'ship_to',
-  'ship_carrier',
-  'title',
-  'short_desc',
-  'keywords',
-  'key_features_1',
-  'key_features_2',
-  'full_image', // 确保这个是 Full Image, 如果是必填请加回
-  'thumbnail_image', // 确保这个是 Thumbnail Image, 如果是必填请加回
+  'size_chart_image',
 ];
 
 
 // Helper function to create validation object
 const createValidation = (field) => {
-  // Initialize validation as an empty object first to ensure it's always defined
-  let validation = {};
-
-  // Then, if there's original validation config, merge it
-  if (field.origValidation) {
-    validation = { ...validation, ...field.origValidation };
-  }
+  let validation = { ...field.origValidation }; // Start with existing origValidation
 
   const isMandatoryByList = mandatoryFieldsFromCSV.includes(field.name);
-  // If the field is explicitly marked as required in its original validation, respect that.
-  const isOrigRequired = field.origValidation && field.origValidation.required;
 
-  if (isMandatoryByList || isOrigRequired) {
-    // Ensure required is true and a message is present
+  if (isMandatoryByList) {
     validation.required = true;
-    // 使用 i18n 键，传递 label 作为参数
-    validation.requiredMsg = `validation.required`;
+    validation.requiredMsg = `validation.required`; // Use i18n key for required message
   } else {
-    // If not mandatory by list and not in origValidation, explicitly set to false and remove any accidental requiredMsg
-    validation.required = false;
-    delete validation.requiredMsg;
+    // If not in the new mandatory list, ensure it's not required, unless it had a specific origValidation.required=true
+    if (!(field.origValidation && field.origValidation.required)) {
+        validation.required = false;
+        delete validation.requiredMsg;
+    }
   }
   return validation;
 };
 
 // Temporary array to hold original structures before adjusting isMandatory
-// ADDED 'product_cn_name' and updated origValidation for new mandatory fields
 const tempFieldsConfig = [
   {
     name: 'vendor_sku', label: 'field.vendor_sku', type: 'text', gridWidth: 8,
-    origValidation: { required: true, pattern: noLeadingZeroAndNoSpecialCharsPattern, patternMsg: 'validation.invalidSKU', maxLength: 100 },
+    origValidation: { pattern: noLeadingZeroAndNoSpecialCharsPattern, patternMsg: 'validation.invalidSKU', maxLength: 100 },
     description: 'Unique product identifier provided by the vendor.', example: 'ABC-12345-XYZ'
   },
   {
     name: 'UPC', label: 'field.UPC', type: 'text', gridWidth: 8,
-    origValidation: { required: true, pattern: upcPattern, patternMsg: 'validation.upcLength', maxLength: 12 },
+    origValidation: { pattern: upcPattern, patternMsg: 'validation.upcLength', maxLength: 12 },
     description: 'Universal Product Code (12-digit number).', example: '123456789012'
   },
   {
     name: 'product_en_name', label: 'field.product_en_name', type: 'text', gridWidth: 8,
-    origValidation: { required: true, maxLength: 100, pattern: generalTextAndSpecialCharsPatternNotEmpty, patternMsg: 'validation.generalPattern' },
+    origValidation: { maxLength: 100, pattern: generalTextAndSpecialCharsPatternNotEmpty, patternMsg: 'validation.generalPattern', maxLengthMsg: 'validation.maxCharacters' },
     description: 'Full product name in English.', example: 'Example Product Name'
   },
   {
     name: 'product_cn_name', label: 'field.product_cn_name', type: 'text', gridWidth: 8,
-    origValidation: { required: true, maxLength: 100, pattern: generalTextAndSpecialCharsPatternNotEmpty, patternMsg: 'validation.generalPattern' },
+    origValidation: { maxLength: 100, pattern: generalTextAndSpecialCharsPatternNotEmpty, patternMsg: 'validation.generalPattern', maxLengthMsg: 'validation.maxCharacters' },
     description: 'Full product name in Chinese.', example: '示例产品名称'
   },
   {
     name: 'status', label: 'field.status', type: 'select', gridWidth: 8,
     options: statusOptions, defaultValue: '0',
-    origValidation: {required: true, requiredMsg: 'validation.required'},
     description: 'Product status. Backend expects an integer.'
   },
   {
@@ -132,7 +108,7 @@ const tempFieldsConfig = [
   },
   {
     name: 'dropship_price', label: 'field.dropship_price', type: 'number', isFee: true, gridWidth: 8,
-    origValidation: { required: true, min: 0, pattern: pricePattern, patternMsg: 'validation.invalidPrice', minMsg:'validation.cannotBeNegative' },
+    origValidation: { min: 0, pattern: pricePattern, patternMsg: 'validation.invalidPrice', minMsg:'validation.cannotBeNegative' },
     description: 'Vendor dropship price.', example: '50.00'
   },
   {
@@ -163,7 +139,6 @@ const tempFieldsConfig = [
   {
     name: 'allow_dropship_return', label: 'field.allow_dropship_return', type: 'select', gridWidth: 8,
     options: [{ value: 'True', label: 'Yes' }, { value: 'False', label: 'No' }], defaultValue: 'False',
-    origValidation: { required: true, requiredMsg: 'validation.required' },
     description: 'Whether dropship returns are allowed.'
   },
   {
@@ -218,7 +193,7 @@ const tempFieldsConfig = [
   },
   {
     name: 'brand', label: 'field.brand', type: 'text', gridWidth: 8,
-    origValidation: { required: true, maxLength: 50, pattern: generalTextAndSpecialCharsPattern, patternMsg: 'validation.generalPattern', maxLengthMsg: 'validation.maxCharacters' },
+    origValidation: { maxLength: 50, pattern: generalTextAndSpecialCharsPattern, patternMsg: 'validation.generalPattern', maxLengthMsg: 'validation.maxCharacters' },
     description: 'Product brand.', example: 'Sony'
   },
   {
@@ -294,7 +269,6 @@ const tempFieldsConfig = [
   {
     name: 'condition', label: 'field.condition', type: 'select', gridWidth: 8,
     options: conditionOptions, defaultValue: '0',
-    origValidation: { required: true, requiredMsg: 'validation.required' },
     description: 'Product condition. Backend expects an integer.'
   },
   {
@@ -314,48 +288,48 @@ const tempFieldsConfig = [
   },
   {
     name: 'UOM', label: 'field.UOM', type: 'text', gridWidth: 8,
-    origValidation: { required: true, maxLength: 50, pattern: generalTextAndSpecialCharsPattern, patternMsg:'validation.generalPattern', maxLengthMsg:'validation.maxCharacters' },
+    origValidation: { maxLength: 50, pattern: generalTextAndSpecialCharsPattern, patternMsg:'validation.generalPattern', maxLengthMsg:'validation.maxCharacters' },
     description: 'Unit of Measurement.', example: 'Each',
     defaultValue: 'Each'
   },
   {
     name: 'net_weight', label: 'field.net_weight', type: 'number', isFee: true, gridWidth: 8,
-    origValidation: { required: true, min:0.01, pattern: pricePattern, patternMsg:'validation.invalidPrice', minMsg:'validation.mustBePositive' },
+    origValidation: { min:0.01, pattern: pricePattern, patternMsg:'validation.invalidPrice', minMsg:'validation.mustBePositive' },
     description: 'Product net weight (e.g., kg or lb).', example: '0.25'
   },
   {
     name: 'gross_weight', label: 'field.gross_weight', type: 'number', isFee: true, gridWidth: 8,
-    origValidation: { required: true, min:0.01, pattern: pricePattern, patternMsg:'validation.invalidPrice', minMsg:'validation.mustBePositive' },
+    origValidation: { min:0.01, pattern: pricePattern, patternMsg:'validation.invalidPrice', minMsg:'validation.mustBePositive' },
     description: 'Product gross weight (with packaging).', example: '0.35'
   },
   {
     name: 'product_height', label: 'field.product_height', type: 'number', isFee: true, gridWidth: 8,
-    origValidation: { required: true, min:0.01, pattern: pricePattern, patternMsg:'validation.invalidPrice', minMsg:'validation.mustBePositive' },
+    origValidation: { min:0.01, pattern: pricePattern, patternMsg:'validation.invalidPrice', minMsg:'validation.mustBePositive' },
     description: 'Product height (e.g., cm or in).', example: '15.0'
   },
   {
     name: 'product_length', label: 'field.product_length', type: 'number', isFee: true, gridWidth: 8,
-    origValidation: { required: true, min:0.01, pattern: pricePattern, patternMsg:'validation.invalidPrice', minMsg:'validation.mustBePositive' },
+    origValidation: { min:0.01, pattern: pricePattern, patternMsg:'validation.invalidPrice', minMsg:'validation.mustBePositive' },
     description: 'Product length.', example: '7.0'
   },
   {
     name: 'product_width', label: 'field.product_width', type: 'number', isFee: true, gridWidth: 8,
-    origValidation: { required: true, min:0.01, pattern: pricePattern, patternMsg:'validation.invalidPrice', minMsg:'validation.mustBePositive' },
+    origValidation: { min:0.01, pattern: pricePattern, patternMsg:'validation.invalidPrice', minMsg:'validation.mustBePositive' },
     description: 'Product width.', example: '1.0'
   },
   {
     name: 'box_height', label: 'field.box_height', type: 'number', isFee: true, gridWidth: 8,
-    origValidation: { required: true, min:0.01, pattern: pricePattern, patternMsg:'validation.invalidPrice', minMsg:'validation.mustBePositive' },
+    origValidation: { min:0.01, pattern: pricePattern, patternMsg:'validation.invalidPrice', minMsg:'validation.mustBePositive' },
     description: 'Box height.', example: '18.0'
   },
   {
     name: 'box_length', label: 'field.box_length', type: 'number', isFee: true, gridWidth: 8,
-    origValidation: { required: true, min:0.01, pattern: pricePattern, patternMsg:'validation.invalidPrice', minMsg:'validation.mustBePositive' },
+    origValidation: { min:0.01, pattern: pricePattern, patternMsg:'validation.invalidPrice', minMsg:'validation.mustBePositive' },
     description: 'Box length.', example: '10.0'
   },
   {
     name: 'box_width', label: 'field.box_width', type: 'number', isFee: true, gridWidth: 8,
-    origValidation: { required: true, min:0.01, pattern: pricePattern, patternMsg:'validation.invalidPrice', minMsg:'validation.mustBePositive' },
+    origValidation: { min:0.01, pattern: pricePattern, patternMsg:'validation.invalidPrice', minMsg:'validation.mustBePositive' },
     description: 'Box width.', example: '3.0'
   },
   {
@@ -385,19 +359,19 @@ const tempFieldsConfig = [
   },
   {
     name: 'ship_from', label: 'field.ship_from', type: 'text', gridWidth: 8,
-    origValidation: { required: true, maxLength: 50, pattern: generalTextAndSpecialCharsPattern, patternMsg:'validation.generalPattern', maxLengthMsg:'validation.maxCharacters' },
+    origValidation: { maxLength: 50, pattern: generalTextAndSpecialCharsPattern, patternMsg:'validation.generalPattern', maxLengthMsg:'validation.maxCharacters' },
     description: 'Origin of product shipment.', example: 'California Warehouse',
     defaultValue: 'US'
   },
   {
     name: 'ship_to', label: 'field.ship_to', type: 'text', gridWidth: 8,
-    origValidation: { required: true, maxLength: 50, pattern: generalTextAndSpecialCharsPattern, patternMsg:'validation.generalPattern', maxLengthMsg:'validation.maxCharacters' },
+    origValidation: { maxLength: 50, pattern: generalTextAndSpecialCharsPattern, patternMsg:'validation.generalPattern', maxLengthMsg:'validation.maxCharacters' },
     description: 'Destination for product delivery.', example: 'USA Domestic',
     defaultValue: 'US'
   },
   {
     name: 'ship_carrier', label: 'field.ship_carrier', type: 'text', gridWidth: 8,
-    origValidation: { required: true, maxLength: 50, pattern: generalTextAndSpecialCharsPattern, patternMsg:'validation.generalPattern', maxLengthMsg:'validation.maxCharacters' },
+    origValidation: { maxLength: 50, pattern: generalTextAndSpecialCharsPattern, patternMsg:'validation.generalPattern', maxLengthMsg:'validation.maxCharacters' },
     description: 'Shipping company.', example: 'UPS Ground',
     defaultValue: 'UPS, USPS, FedEx'
   },
@@ -423,12 +397,12 @@ const tempFieldsConfig = [
   },
   {
     name: 'title', label: 'field.title', type: 'text', gridWidth: 24,
-    origValidation: { required: true, maxLength: 500, pattern: generalTextAndSpecialCharsPattern, patternMsg:'validation.generalPattern', maxLengthMsg:'validation.maxCharacters' },
+    origValidation: { maxLength: 500, pattern: generalTextAndSpecialCharsPattern, patternMsg:'validation.generalPattern', maxLengthMsg:'validation.maxCharacters' },
     description: 'Product listing title.', example: 'Amazing New Product - Limited Stock!'
   },
   {
     name: 'short_desc', label: 'field.short_desc', type: 'textarea', rows: 2, gridWidth: 24,
-    origValidation: { required: true, maxLength: 100, pattern: generalTextAndSpecialCharsPattern, patternMsg:'validation.generalPattern', maxLengthMsg:'validation.maxCharacters' },
+    origValidation: { maxLength: 100, pattern: generalTextAndSpecialCharsPattern, patternMsg:'validation.generalPattern', maxLengthMsg:'validation.maxCharacters' },
     description: 'Brief product description.', example: 'Get this amazing new product today.'
   },
   {
@@ -438,7 +412,7 @@ const tempFieldsConfig = [
   },
   {
     name: 'keywords', label: 'field.keywords', type: 'text', gridWidth: 24,
-    origValidation: { required: true, maxLength: 50, pattern: generalTextAndSpecialCharsPattern, patternMsg:'validation.generalPattern', maxLengthMsg:'validation.maxCharacters' },
+    origValidation: { maxLength: 50, pattern: generalTextAndSpecialCharsPattern, patternMsg:'validation.generalPattern', maxLengthMsg:'validation.maxCharacters' },
     description: 'Comma-separated keywords for SEO.', example: 'new, product, amazing, electronics'
   },
   {
@@ -476,19 +450,19 @@ const tempFieldsConfig = [
     origValidation: { maxLength: 2000, pattern: generalTextAndSpecialCharsPattern, patternMsg:'validation.generalPattern', maxLengthMsg:'validation.maxCharacters' },
     description: 'Primary colors for mapping. E.g., "Black" or "Red, Blue".', example: 'Black'
   },
-  { name: 'key_features_1', label: 'field.key_features_1', type: 'text', gridWidth: 24, origValidation: { required: true, maxLength: 100, pattern:generalTextAndSpecialCharsPattern, patternMsg:'validation.generalPattern', maxLengthMsg:'validation.maxCharacters' } },
-  { name: 'key_features_2', label: 'field.key_features_2', type: 'text', gridWidth: 24, origValidation: { required: true, maxLength: 100, pattern:generalTextAndSpecialCharsPattern, patternMsg:'validation.generalPattern', maxLengthMsg:'validation.maxCharacters' } },
+  { name: 'key_features_1', label: 'field.key_features_1', type: 'text', gridWidth: 24, origValidation: { maxLength: 100, pattern:generalTextAndSpecialCharsPattern, patternMsg:'validation.generalPattern', maxLengthMsg:'validation.maxCharacters' } },
+  { name: 'key_features_2', label: 'field.key_features_2', type: 'text', gridWidth: 24, origValidation: { maxLength: 100, pattern:generalTextAndSpecialCharsPattern, patternMsg:'validation.generalPattern', maxLengthMsg:'validation.maxCharacters' } },
   { name: 'key_features_3', label: 'field.key_features_3', type: 'text', gridWidth: 24, origValidation: { maxLength: 100, pattern:generalTextAndSpecialCharsPattern, patternMsg:'validation.generalPattern', maxLengthMsg:'validation.maxCharacters' } },
   { name: 'key_features_4', label: 'field.key_features_4', type: 'text', gridWidth: 24, origValidation: { maxLength: 100, pattern:generalTextAndSpecialCharsPattern, patternMsg:'validation.generalPattern', maxLengthMsg:'validation.maxCharacters' } },
   { name: 'key_features_5', label: 'field.key_features_5', type: 'text', gridWidth: 24, origValidation: { maxLength: 100, pattern:generalTextAndSpecialCharsPattern, patternMsg:'validation.generalPattern', maxLengthMsg:'validation.maxCharacters' } },
-  { name: 'main_image', label: 'field.main_image', type: 'url', gridWidth: 24, origValidation: { required: true, pattern: imageUrlPattern, patternMsg: 'validation.urlInvalid' } },
+  { name: 'main_image', label: 'field.main_image', type: 'url', gridWidth: 24, origValidation: { pattern: imageUrlPattern, patternMsg: 'validation.urlInvalid' } },
   { name: 'front_image', label: 'field.front_image', type: 'url', gridWidth: 8, origValidation: { pattern: imageUrlPattern, patternMsg: 'validation.urlInvalid' } },
   { name: 'side_image', label: 'field.side_image', type: 'url', gridWidth: 8, origValidation: { pattern: imageUrlPattern, patternMsg: 'validation.urlInvalid' } },
   { name: 'back_image', label: 'field.back_image', type: 'url', gridWidth: 8, origValidation: { pattern: imageUrlPattern, patternMsg: 'validation.urlInvalid' } },
   { name: 'detail_image', label: 'field.detail_image', type: 'url', gridWidth: 8, origValidation: { pattern: imageUrlPattern, patternMsg: 'validation.urlInvalid' } },
-  { name: 'full_image', label: 'field.full_image', type: 'url', gridWidth: 8, origValidation: { required: true, pattern: imageUrlPattern, patternMsg: 'validation.urlInvalid' } },
-  { name: 'thumbnail_image', label: 'field.thumbnail_image', type: 'url', gridWidth: 8, origValidation: { required: true, pattern: imageUrlPattern, patternMsg: 'validation.urlInvalid' } },
-  { name: 'size_chart_image', label: 'field.size_chart_image', type: 'url', gridWidth: 8, origValidation: { required: true, pattern: imageUrlPattern, patternMsg: 'validation.urlInvalid' } },
+  { name: 'full_image', label: 'field.full_image', type: 'url', gridWidth: 8, origValidation: { pattern: imageUrlPattern, patternMsg: 'validation.urlInvalid' } },
+  { name: 'thumbnail_image', label: 'field.thumbnail_image', type: 'url', gridWidth: 8, origValidation: { pattern: imageUrlPattern, patternMsg: 'validation.urlInvalid' } },
+  { name: 'size_chart_image', label: 'field.size_chart_image', type: 'url', gridWidth: 8, origValidation: { pattern: imageUrlPattern, patternMsg: 'validation.urlInvalid' } },
   { name: 'swatch_image', label: 'field.swatch_image', type: 'url', gridWidth: 8, origValidation: { pattern: imageUrlPattern, patternMsg: 'validation.urlInvalid' } },
   { name: 'additional_image_1', label: 'field.additional_image_1', type: 'url', gridWidth: 8, origValidation: { pattern: imageUrlPattern, patternMsg: 'validation.urlInvalid' } },
   { name: 'additional_image_2', label: 'field.additional_image_2', type: 'url', gridWidth: 8, origValidation: { pattern: imageUrlPattern, patternMsg: 'validation.urlInvalid' } },
@@ -548,18 +522,11 @@ const tempFieldsConfig = [
 
 // Final processing to set isMandatory and validation object
 export const fieldsConfig = tempFieldsConfig.map(field => {
-  const isMandatoryByList = mandatoryFieldsFromCSV.includes(field.name);
-  // Check if origValidation itself has a 'required' flag for fields not in CSV list
-  const isOrigValidationRequired = field.origValidation && field.origValidation.required;
-
   const finalValidation = createValidation(field);
 
   return {
     ...field,
-    // Determine final mandatory status
-    isMandatory: isMandatoryByList || isOrigValidationRequired || finalValidation.required,
+    isMandatory: finalValidation.required, // isMandatory directly reflects the finalValidation.required
     validation: finalValidation,
-    // origValidation can be kept for reference or removed if fully processed into 'validation'
-    // origValidation: undefined,
   };
 });
