@@ -115,6 +115,10 @@ const App = () => {
       if (field.type === 'url' && (initialValues[field.name] === null || initialValues[field.name] === undefined)) {
         initialValues[field.name] = '';
       }
+      // **修改**：初始化时将 null 或 undefined 的 text/textarea 字段设置为空字符串
+      if ((field.type === 'text' || field.type === 'textarea') && (initialValues[field.name] === null || initialValues[field.name] === undefined)) {
+        initialValues[field.name] = '';
+      }
     });
 
     form.setFieldsValue(initialValues);
@@ -156,9 +160,15 @@ const App = () => {
           if (field.name === 'allow_dropship_return' && updatedItem[field.name] !== undefined) {
               updatedItem[field.name] = updatedItem[field.name] === 'True' || updatedItem[field.name] === true;
           }
-          // **修改**：如果 URL 字段为空字符串、undefined 或 null，将其设置为 null
+          // 如果 URL 字段为空字符串、undefined 或 null，将其设置为 null
           if (field.type === 'url') {
             if (updatedItem[field.name] === null || updatedItem[field.name] === undefined || String(updatedItem[field.name]).trim() === '') {
+              updatedItem[field.name] = null;
+            }
+          }
+          // **修改**：如果非强制必填的 text 或 textarea 字段为空字符串或只含空白符，将其设置为 null
+          if ((field.type === 'text' || field.type === 'textarea')) { // removed !field.isMandatory condition here as it is not strictly needed for this transform
+            if (updatedItem[field.name] !== undefined && updatedItem[field.name] !== null && String(updatedItem[field.name]).trim() === '') {
               updatedItem[field.name] = null;
             }
           }
@@ -329,6 +339,8 @@ const App = () => {
             acc[field.name] = selectDefault;
         } else if (field.type === 'url') {
             acc[field.name] = ''; // URL字段默认显示为空字符串，而不是null
+        } else if (field.type === 'text' || field.type === 'textarea') { // text/textarea字段默认显示为空字符串
+            acc[field.name] = '';
         } else {
             if (field.isMandatory) {
                 acc[field.name] = '';
@@ -454,9 +466,15 @@ const App = () => {
         if (field.name === 'allow_dropship_return' && submissionValues[field.name] !== undefined) {
           submissionValues[field.name] = submissionValues[field.name] === 'True' || submissionValues[field.name] === true;
         }
-        // **修改**：如果 URL 字段为空字符串、undefined 或 null，将其设置为 null
+        // 如果 URL 字段为空字符串、undefined 或 null，将其设置为 null
         if (field.type === 'url') {
           if (submissionValues[field.name] === null || submissionValues[field.name] === undefined || String(submissionValues[field.name]).trim() === '') {
+            submissionValues[field.name] = null;
+          }
+        }
+        // **修改**：如果非强制必填的 text 或 textarea 字段为空字符串或只含空白符，将其设置为 null
+        if ((field.type === 'text' || field.type === 'textarea')) { // removed !field.isMandatory condition here as it is not strictly needed for this transform
+          if (submissionValues[field.name] !== undefined && submissionValues[field.name] !== null && String(submissionValues[field.name]).trim() === '') {
             submissionValues[field.name] = null;
           }
         }

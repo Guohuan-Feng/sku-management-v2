@@ -46,6 +46,10 @@ const SkuFormModal = ({
           if (field.type === 'url' && (formData[field.name] === null || formData[field.name] === undefined)) {
             formData[field.name] = '';
           }
+          // 初始化时将 null 或 undefined 的 text/textarea 字段设置为空字符串
+          if ((field.type === 'text' || field.type === 'textarea') && (formData[field.name] === null || formData[field.name] === undefined)) {
+            formData[field.name] = '';
+          }
         });
         form.setFieldsValue(formData);
       } else {
@@ -60,6 +64,10 @@ const SkuFormModal = ({
           // 初始化时将 null 或 undefined 的 URL 字段设置为空字符串
           if (field.type === 'url') {
             defaultValues[field.name] = ''; // URL字段默认显示为空字符串
+          }
+          // 初始化时将 null 或 undefined 的 text/textarea 字段设置为空字符串
+          if (field.type === 'text' || field.type === 'textarea') {
+            defaultValues[field.name] = '';
           }
         });
         form.setFieldsValue(defaultValues);
@@ -102,9 +110,15 @@ const SkuFormModal = ({
           if (field.name === 'allow_dropship_return' && submissionValues[field.name] !== undefined) {
             submissionValues[field.name] = submissionValues[field.name] === 'True' || submissionValues[field.name] === true;
           }
-          // **修改**：如果 URL 字段为空字符串、undefined 或 null，将其设置为 null
+          // 如果 URL 字段为空字符串、undefined 或 null，将其设置为 null
           if (field.type === 'url') {
             if (submissionValues[field.name] === null || submissionValues[field.name] === undefined || String(submissionValues[field.name]).trim() === '') {
+              submissionValues[field.name] = null;
+            }
+          }
+          // 如果非强制必填的 text 或 textarea 字段为空字符串或只含空白符，将其设置为 null
+          if ((field.type === 'text' || field.type === 'textarea')) {
+            if (submissionValues[field.name] !== undefined && submissionValues[field.name] !== null && String(submissionValues[field.name]).trim() === '') {
               submissionValues[field.name] = null;
             }
           }
