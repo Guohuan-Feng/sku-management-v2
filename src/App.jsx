@@ -119,6 +119,11 @@ const App = () => {
       if (field.name === 'UOM' && (initialValues[field.name] === null || initialValues[field.name] === undefined)) {
         initialValues[field.name] = '';
       }
+      // 将 null 转换为 ''，以便在输入框中显示为空
+      const currentFieldConfig = fieldsConfig.find(f => f.name === field.name);
+      if (currentFieldConfig && typeof initialValues[field.name] === 'object' && initialValues[field.name] === null) {
+          initialValues[field.name] = '';
+      }
     });
 
     form.setFieldsValue(initialValues);
@@ -159,6 +164,11 @@ const App = () => {
           }
           if (field.name === 'allow_dropship_return' && updatedItem[field.name] !== undefined) {
               updatedItem[field.name] = updatedItem[field.name] === 'True' || updatedItem[field.name] === true;
+          }
+          // 新增逻辑：如果字段不是强制必填且其值为字符串且为空，则将其设为 null
+          const currentFieldConfig = fieldsConfig.find(f => f.name === field.name);
+          if (currentFieldConfig && !currentFieldConfig.isMandatory && typeof updatedItem[field.name] === 'string' && updatedItem[field.name].trim() === '') {
+              updatedItem[field.name] = null;
           }
           // Convert empty string URL fields to null
           if (field.type === 'url') {
@@ -461,6 +471,11 @@ const App = () => {
         }
         if (field.name === 'allow_dropship_return' && submissionValues[field.name] !== undefined) {
           submissionValues[field.name] = submissionValues[field.name] === 'True' || submissionValues[field.name] === true;
+        }
+        // 新增逻辑：如果字段不是强制必填且其值为字符串且为空，则将其设为 null
+        const currentFieldConfig = fieldsConfig.find(f => f.name === field.name);
+        if (currentFieldConfig && !currentFieldConfig.isMandatory && typeof submissionValues[field.name] === 'string' && submissionValues[field.name].trim() === '') {
+            submissionValues[field.name] = null;
         }
         // Convert empty string URL fields to null
         if (field.type === 'url') {

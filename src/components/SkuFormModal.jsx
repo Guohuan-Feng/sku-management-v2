@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'; // 引入 useEffect 和 useState
 import { generateAIDescription } from '../services/skuApiService';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { fieldsConfig, statusOptions, conditionOptions } from './fieldConfig'; // 确保导入 fieldsConfig
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -49,6 +50,11 @@ const SkuFormModal = ({
           if (field.type === 'url' && (formData[field.name] === null || formData[field.name] === undefined)) {
             formData[field.name] = '';
           }
+          // 将 null 转换为 ''，以便在输入框中显示为空
+          const currentFieldConfig = fieldsConfig.find(f => f.name === field.name);
+          if (currentFieldConfig && typeof formData[field.name] === 'object' && formData[field.name] === null) {
+              formData[field.name] = '';
+          }
         });
         form.setFieldsValue(formData);
       } else {
@@ -77,6 +83,11 @@ const SkuFormModal = ({
                 } else if (field.type === 'url') {
                     loadedFormData[field.name] = ''; // URL字段默认显示为空字符串
                 }
+                // 将 null 转换为 ''，以便在输入框中显示为空
+                const currentFieldConfig = fieldsConfig.find(f => f.name === field.name);
+                if (currentFieldConfig && typeof loadedFormData[field.name] === 'object' && loadedFormData[field.name] === null) {
+                    loadedFormData[field.name] = '';
+                }
             });
             form.setFieldsValue(loadedFormData);
             message.info(t('messages.tempDataLoaded')); // 提示用户数据已加载
@@ -95,6 +106,11 @@ const SkuFormModal = ({
               defaultValues[field.name] = String(field.defaultValue);
             }
             if (field.type === 'url') {
+                defaultValues[field.name] = '';
+            }
+            // 将 null 转换为 ''，以便在输入框中显示为空
+            const currentFieldConfig = fieldsConfig.find(f => f.name === field.name);
+            if (currentFieldConfig && typeof defaultValues[field.name] === 'object' && defaultValues[field.name] === null) {
                 defaultValues[field.name] = '';
             }
           });
@@ -150,6 +166,11 @@ const SkuFormModal = ({
         }
         if (field.name === 'allow_dropship_return' && submissionValues[field.name] !== undefined) {
           submissionValues[field.name] = submissionValues[field.name] === 'True' || submissionValues[field.name] === true;
+        }
+        // 新增逻辑：如果字段不是强制必填且其值为字符串且为空，则将其设为 null
+        const currentFieldConfig = fieldsConfig.find(f => f.name === field.name);
+        if (currentFieldConfig && !currentFieldConfig.isMandatory && typeof submissionValues[field.name] === 'string' && submissionValues[field.name].trim() === '') {
+            submissionValues[field.name] = null;
         }
         if (field.type === 'url') {
           if (submissionValues[field.name] === null || submissionValues[field.name] === undefined || String(submissionValues[field.name]).trim() === '') {
