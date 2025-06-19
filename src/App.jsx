@@ -70,8 +70,8 @@ const App = () => {
       message.success(t('messages.skuDataLoaded'));
     } catch (error) {
       console.error("Failed to fetch SKUs:", error);
-      message.error(`<span class="math-inline">\{t\('messages\.failedToFetchSkus'\)\}</span>{error.message}`);
-      setErrorMessages(prev => [...prev, `<span class="math-inline">\{t\('messages\.failedToFetchSkus'\)\}</span>{error.message}`]);
+      message.error(`${t('messages.failedToFetchSkus')}${error.message}`);
+      setErrorMessages(prev => [...prev, `${t('messages.failedToFetchSkus')}${error.message}`]);
       setDataSource([]);
     } finally {
       setLoading(false);
@@ -110,6 +110,10 @@ const App = () => {
         initialValues[field.name] = isNaN(numValue) ? null : numValue;
       } else if (field.name === 'allow_dropship_return' && initialValues[field.name] !== undefined && initialValues[field.name] !== null) {
         initialValues[field.name] = String(initialValues[field.name]);
+      }
+      // 初始化时将 null 或 undefined 的 URL 字段设置为空字符串
+      if (field.type === 'url' && (initialValues[field.name] === null || initialValues[field.name] === undefined)) {
+        initialValues[field.name] = '';
       }
     });
 
@@ -151,6 +155,12 @@ const App = () => {
           }
           if (field.name === 'allow_dropship_return' && updatedItem[field.name] !== undefined) {
               updatedItem[field.name] = updatedItem[field.name] === 'True' || updatedItem[field.name] === true;
+          }
+          // **修改**：如果 URL 字段为空字符串、undefined 或 null，将其设置为 null
+          if (field.type === 'url') {
+            if (updatedItem[field.name] === null || updatedItem[field.name] === undefined || String(updatedItem[field.name]).trim() === '') {
+              updatedItem[field.name] = null;
+            }
           }
       });
 
@@ -318,7 +328,7 @@ const App = () => {
             }
             acc[field.name] = selectDefault;
         } else if (field.type === 'url') {
-            acc[field.name] = null;
+            acc[field.name] = ''; // URL字段默认显示为空字符串，而不是null
         } else {
             if (field.isMandatory) {
                 acc[field.name] = '';
@@ -357,7 +367,7 @@ const App = () => {
       setSelectedRowKeys(prevKeys => prevKeys.filter(k => k !== skuIdToDelete));
     } catch (error) {
       console.error('Failed to delete SKU:', error);
-      message.error(`<span class="math-inline">\{t\('tableOperations\.deleteError'\)\}</span>{error.message}`);
+      message.error(`${t('tableOperations.deleteError')}${error.message}`);
       setErrorMessages(prev => [...prev, `${t('tableOperations.deleteError')}ID ${skuIdToDelete}: ${error.message}`]);
     } finally {
       setLoading(false);
@@ -443,6 +453,12 @@ const App = () => {
         }
         if (field.name === 'allow_dropship_return' && submissionValues[field.name] !== undefined) {
           submissionValues[field.name] = submissionValues[field.name] === 'True' || submissionValues[field.name] === true;
+        }
+        // **修改**：如果 URL 字段为空字符串、undefined 或 null，将其设置为 null
+        if (field.type === 'url') {
+          if (submissionValues[field.name] === null || submissionValues[field.name] === undefined || String(submissionValues[field.name]).trim() === '') {
+            submissionValues[field.name] = null;
+          }
         }
       });
 
@@ -641,7 +657,7 @@ const App = () => {
     XLSX.utils.book_append_sheet(workbook, worksheet, 'SKUs');
 
     const now = new Date();
-    const timestamp = `<span class="math-inline">\{now\.getFullYear\(\)\.toString\(\)\.slice\(\-2\)\}</span>{(now.getMonth() + 1).toString().padStart(2, '0')}<span class="math-inline">\{now\.getDate\(\)\.toString\(\)\.padStart\(2, '0'\)\}\_</span>{now.getHours().toString().padStart(2, '0')}<span class="math-inline">\{now\.getMinutes\(\)\.toString\(\)\.padStart\(2, '0'\)\}</span>{now.getSeconds().toString().padStart(2, '0')}`;
+    const timestamp = `${now.getFullYear().toString().slice(-2)}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}${now.getSeconds().toString().padStart(2, '0')}`;
     XLSX.writeFile(workbook, `skus_${timestamp}.xlsx`);
     message.success(t('messages.skuExported'));
   };
@@ -663,7 +679,7 @@ const App = () => {
           const fieldName = fe.loc && fe.loc.length > 1 ? fe.loc[fe.loc.length -1] : t('messages.unknownField');
           return `${fieldName}: ${fe.msg}`;
         }).join('; ');
-        errorMessage += `<span class="math-inline">\{t\('messages\.validationErrors'\)\}</span>{detailedErrors}`;
+        errorMessage += `${t('messages.validationErrors')}${detailedErrors}`;
          setErrorMessages(prev => [...prev, `${t('messages.validationErrorsInFile', { fileName: file.name })}: ${detailedErrors}`]);
       } else if (error.message) {
         errorMessage += error.message;
@@ -705,7 +721,7 @@ const App = () => {
         <div className="header-container">
             <div className="logo-title-container">
                 <img src={JFJPLogo} alt="JFJP Logo" className="header-logo" />
-                <h1 className={`header-title ${i18n.language === 'zh' ? 'zh' : ''}`}>{t('systemTitle')}</h1> {/* 添加动态类名 */}
+                <h1 className={`header-title ${i18n.language === 'zh' ? 'zh' : ''}`}>{t('systemTitle')}</h1>
             </div>
             <div className="header-right">
                 {/* 新增官网链接 */}
