@@ -1,6 +1,6 @@
 // src/components/SkuFormModal.jsx
 import { Modal, Form, Input, Select, InputNumber, Button, Row, Col, message } from 'antd';
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react'; // 引入 useEffect 和 useState
 import { generateAIDescription } from '../services/skuApiService';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,6 +14,8 @@ const AI_INPUT_FIELDS = [
   'gender', 'keywords'
 ];
 
+const LOCAL_STORAGE_KEY = 'tempSkuFormData'; // 定义 localStorage 的键名
+
 const SkuFormModal = ({
   visible,
   onClose,
@@ -25,13 +27,15 @@ const SkuFormModal = ({
   apiFieldErrors,
   showAllMode = false,
 }) => {
-  const { t } = useTranslation(); // 使用 useTranslation 钩子
+  const { t } = useTranslation();
   const [form] = Form.useForm();
   const [aiLoading, setAiLoading] = useState(false);
 
+  // 改进的 useEffect，用于处理表单数据的加载和保存
   useEffect(() => {
     if (visible) {
       if (initialData) {
+        // 如果是编辑模式，加载 initialData
         const formData = { ...initialData };
         fieldsConfig.forEach(field => {
           if (field.type === 'select') {
@@ -42,40 +46,77 @@ const SkuFormModal = ({
             const numValue = parseFloat(formData[field.name]);
             formData[field.name] = isNaN(numValue) ? null : numValue;
           }
-          // 初始化时将 null 或 undefined 的 URL 字段设置为空字符串，以便 Ant Design Form 正确显示
           if (field.type === 'url' && (formData[field.name] === null || formData[field.name] === undefined)) {
-            formData[field.name] = '';
-          }
-          // 初始化时将 null 或 undefined 的 text/textarea 字段设置为空字符串
-          if ((field.type === 'text' || field.type === 'textarea') && (formData[field.name] === null || formData[field.name] === undefined)) {
             formData[field.name] = '';
           }
         });
         form.setFieldsValue(formData);
       } else {
-        const defaultValues = {};
-        fieldsConfig.forEach(field => {
-          if (field.defaultValue !== undefined) {
-            defaultValues[field.name] = field.defaultValue;
+        // 如果是新增模式，尝试从 localStorage 加载临时保存的数据
+        const savedData = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (savedData) {
+          try {
+            const parsedData = JSON.parse(savedData);
+            // 确保加载的数据符合字段配置的类型要求
+            const loadedFormData = {};
+            fieldsConfig.forEach(field => {
+                let value = parsedData[field.name];
+                if (value !== undefined && value !== null) {
+                    if (field.type === 'select') {
+                        loadedFormData[field.name] = String(value);
+                    } else if (field.type === 'number') {
+                        const numValue = parseFloat(value);
+                        loadedFormData[field.name] = isNaN(numValue) ? null : numValue;
+                    } else if (field.name === 'allow_dropship_return') {
+                        loadedFormData[field.name] = String(value);
+                    } else if (field.type === 'url') {
+                        loadedFormData[field.name] = String(value).trim() === '' ? '' : value;
+                    } else {
+                        loadedFormData[field.name] = value;
+                    }
+                } else if (field.type === 'url') {
+                    loadedFormData[field.name] = ''; // URL字段默认显示为空字符串
+                }
+            });
+            form.setFieldsValue(loadedFormData);
+            message.info(t('messages.tempDataLoaded')); // 提示用户数据已加载
+          } catch (e) {
+            console.error("Failed to parse saved form data:", e);
+            localStorage.removeItem(LOCAL_STORAGE_KEY); // 解析失败则清除无效数据
           }
-          if (field.name === 'allow_dropship_return' && field.defaultValue !== undefined) {
-            defaultValues[field.name] = String(field.defaultValue);
-          }
-          // 初始化时将 null 或 undefined 的 URL 字段设置为空字符串
-          if (field.type === 'url') {
-            defaultValues[field.name] = ''; // URL字段默认显示为空字符串
-          }
-          // 初始化时将 null 或 undefined 的 text/textarea 字段设置为空字符串
-          if (field.type === 'text' || field.type === 'textarea') {
-            defaultValues[field.name] = '';
-          }
-        });
-        form.setFieldsValue(defaultValues);
+        } else {
+          // 如果没有临时数据，则设置默认值
+          const defaultValues = {};
+          fieldsConfig.forEach(field => {
+            if (field.defaultValue !== undefined) {
+              defaultValues[field.name] = field.defaultValue;
+            }
+            if (field.name === 'allow_dropship_return' && field.defaultValue !== undefined) {
+              defaultValues[field.name] = String(field.defaultValue);
+            }
+            if (field.type === 'url') {
+                defaultValues[field.name] = '';
+            }
+          });
+          form.setFieldsValue(defaultValues);
+        }
       }
     } else {
-      form.resetFields();
+      // 模态框关闭时，如果不是编辑现有 SKU 且表单有内容，则进行临时保存
+      if (!initialData) {
+        const currentValues = form.getFieldsValue(true); // 获取所有字段值
+        const isEmpty = Object.values(currentValues).every(val => val === undefined || val === null || (typeof val === 'string' && val.trim() === ''));
+
+        if (!isEmpty) {
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(currentValues));
+            message.info(t('messages.tempDataSaved'));
+        } else {
+            localStorage.removeItem(LOCAL_STORAGE_KEY); // 如果表单是空的，则清除旧的临时数据
+        }
+      }
+      form.resetFields(); // 无论是否保存，关闭时重置表单
     }
-  }, [visible, initialData, form, fieldsConfig]);
+  }, [visible, initialData, form, fieldsConfig, t]);
 
   useEffect(() => {
     if (apiFieldErrors && apiFieldErrors.length > 0) {
@@ -87,51 +128,44 @@ const SkuFormModal = ({
     }
   }, [apiFieldErrors, form]);
 
-  const handleOk = () => {
-    form
-      .validateFields()
-      .then(async (values) => {
-        const submissionValues = { ...values };
-        fieldsConfig.forEach(field => {
-          if (field.type === 'number' && submissionValues[field.name] !== undefined && submissionValues[field.name] !== null) {
-            const parsedValue = parseFloat(submissionValues[field.name]);
-            if (!isNaN(parsedValue)) {
-                submissionValues[field.name] = field.isFee ? parseFloat(parsedValue.toFixed(2)) : parsedValue;
-            } else {
-                submissionValues[field.name] = null;
-            }
-          }
-          if (field.name === 'status' && submissionValues[field.name] !== undefined) {
-            submissionValues[field.name] = parseInt(submissionValues[field.name], 10);
-          }
-          if (field.name === 'condition' && submissionValues[field.name] !== undefined) {
-            submissionValues[field.name] = parseInt(submissionValues[field.name], 10);
-          }
-          if (field.name === 'allow_dropship_return' && submissionValues[field.name] !== undefined) {
-            submissionValues[field.name] = submissionValues[field.name] === 'True' || submissionValues[field.name] === true;
-          }
-          // 如果 URL 字段为空字符串、undefined 或 null，将其设置为 null
-          if (field.type === 'url') {
-            if (submissionValues[field.name] === null || submissionValues[field.name] === undefined || String(submissionValues[field.name]).trim() === '') {
-              submissionValues[field.name] = null;
-            }
-          }
-          // 如果非强制必填的 text 或 textarea 字段为空字符串或只含空白符，将其设置为 null
-          if ((field.type === 'text' || field.type === 'textarea')) {
-            if (submissionValues[field.name] !== undefined && submissionValues[field.name] !== null && String(submissionValues[field.name]).trim() === '') {
-              submissionValues[field.name] = null;
-            }
-          }
-        });
+  const handleOk = async () => {
+    try {
+      const values = await form.validateFields();
+      const submissionValues = { ...values };
 
-        const success = await onSubmit(submissionValues);
-        if (success) {
-          form.resetFields();
+      fieldsConfig.forEach(field => {
+        if (field.type === 'number' && submissionValues[field.name] !== undefined && submissionValues[field.name] !== null) {
+          const parsedValue = parseFloat(submissionValues[field.name]);
+          if (!isNaN(parsedValue)) {
+            submissionValues[field.name] = field.isFee ? parseFloat(parsedValue.toFixed(2)) : parsedValue;
+          } else {
+            submissionValues[field.name] = null;
+          }
         }
-      })
-      .catch((info) => {
-        console.log('Validate Failed (Frontend Validation Failed):', info);
+        if (field.name === 'status' && submissionValues[field.name] !== undefined) {
+          submissionValues[field.name] = parseInt(submissionValues[field.name], 10);
+        }
+        if (field.name === 'condition' && submissionValues[field.name] !== undefined) {
+          submissionValues[field.name] = parseInt(submissionValues[field.name], 10);
+        }
+        if (field.name === 'allow_dropship_return' && submissionValues[field.name] !== undefined) {
+          submissionValues[field.name] = submissionValues[field.name] === 'True' || submissionValues[field.name] === true;
+        }
+        if (field.type === 'url') {
+          if (submissionValues[field.name] === null || submissionValues[field.name] === undefined || String(submissionValues[field.name]).trim() === '') {
+            submissionValues[field.name] = null;
+          }
+        }
       });
+
+      const success = await onSubmit(submissionValues, initialData); // 传递 initialData 以便判断是创建还是更新
+      if (success) {
+        localStorage.removeItem(LOCAL_STORAGE_KEY); // 成功提交后清除临时数据
+        form.resetFields();
+      }
+    } catch (info) {
+      console.log('Validate Failed (Frontend Validation Failed):', info);
+    }
   };
 
   const handleAIGenerate = async () => {
@@ -227,7 +261,6 @@ const SkuFormModal = ({
   };
 
   const renderField = (field) => {
-    // 提取 placeholder 文本
     const placeholderText = field?.example || field?.description || '';
 
     switch (field.type) {
@@ -272,20 +305,31 @@ const SkuFormModal = ({
          ['title', 'short_desc', 'long_desc', 'key_features_1', 'key_features_2', 'key_features_3', 'key_features_4', 'key_features_5'].includes(f.name)
   );
 
+  // 新增清除临时保存数据的函数
+  const clearTempData = () => {
+    localStorage.removeItem(LOCAL_STORAGE_KEY);
+    form.resetFields(); // 清除表单内容
+    message.success(t('messages.tempDataCleared'));
+  };
+
   return (
     <Modal
       title={showAllMode ? t('modalTitles.viewEditAll') : (initialData ? t('modalTitles.editSku') : t('modalTitles.createSku'))}
       open={visible}
       onOk={handleOk}
-      onCancel={onClose}
+      onCancel={onClose} // onClose 会触发 useEffect 中的保存逻辑
       width="80vw"
-      destroyOnClose
+      destroyOnClose={!initialData} // 如果是新增模式（没有 initialData），关闭时销毁组件以确保重新加载时不保留旧状态
       maskClosable={false}
       footer={[
+          // 在新增模式下才显示“清除临时保存”按钮
+          !initialData && <Button key="clearTemp" onClick={clearTempData}>
+            {t('modalButtons.clearTempData')}
+          </Button>,
           <Button key="back" onClick={onClose}>
             {t('modalButtons.cancel')}
           </Button>,
-          <Button key="submit" type="primary" onClick={handleOk} loading={false}>
+          <Button key="submit" type="primary" onClick={handleOk} loading={aiLoading}>
             {initialData ? t('modalButtons.update') : t('modalButtons.create')}
           </Button>,
         ]}

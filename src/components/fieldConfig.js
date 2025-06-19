@@ -290,7 +290,6 @@ const tempFieldsConfig = [
     name: 'UOM', label: 'field.UOM', type: 'text', gridWidth: 8,
     origValidation: { maxLength: 50, pattern: generalTextAndSpecialCharsPattern, patternMsg:'validation.generalPattern', maxLengthMsg:'validation.maxCharacters' },
     description: 'Unit of Measurement.', example: 'Each',
-    defaultValue: 'Each'
   },
   {
     name: 'net_weight', label: 'field.net_weight', type: 'number', isFee: true, gridWidth: 8,

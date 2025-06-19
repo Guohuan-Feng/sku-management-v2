@@ -10,14 +10,14 @@ import EditableCell from './components/EditableCell';
 import { getAllSkus, createSku, updateSku, deleteSku, uploadSkuCsv } from './services/skuApiService';
 import AuthForm from './components/AuthForm';
 
-// 导入 Ant Design 语言包
+// Import Ant Design language packs
 import enUS from 'antd/locale/en_US';
 import zhCN from 'antd/locale/zh_CN';
 
-// 导入 useTranslation
+// Import useTranslation
 import { useTranslation } from 'react-i18next';
 
-// 假设图片中的 Logo 是一个本地图片，或者你可以替换为CDN链接
+// Assume the Logo in the image is a local image, or you can replace it with a CDN link
 import JFJPLogo from '/JFJP_logo.png';
 
 const App = () => {
@@ -39,16 +39,16 @@ const App = () => {
   const [viewingSku, setViewingSku] = useState(null);
   const [searchText, setSearchText] = useState('');
 
-  // 新增登录状态
+  // New login status
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  // Ant Design 语言包映射
+  // Ant Design language pack mapping
   const antdLocales = {
     en: enUS,
     zh: zhCN,
   };
 
-  // 检查本地存储中的 token，判断用户是否已登录
+  // Check token in local storage to determine if the user is logged in
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     if (token) {
@@ -111,12 +111,12 @@ const App = () => {
       } else if (field.name === 'allow_dropship_return' && initialValues[field.name] !== undefined && initialValues[field.name] !== null) {
         initialValues[field.name] = String(initialValues[field.name]);
       }
-      // 初始化时将 null 或 undefined 的 URL 字段设置为空字符串
+      // Initialize URL fields to empty string if null or undefined
       if (field.type === 'url' && (initialValues[field.name] === null || initialValues[field.name] === undefined)) {
         initialValues[field.name] = '';
       }
-      // **修改**：初始化时将 null 或 undefined 的 text/textarea 字段设置为空字符串
-      if ((field.type === 'text' || field.type === 'textarea') && (initialValues[field.name] === null || initialValues[field.name] === undefined)) {
+      // Initialize UOM field to empty string if null or undefined
+      if (field.name === 'UOM' && (initialValues[field.name] === null || initialValues[field.name] === undefined)) {
         initialValues[field.name] = '';
       }
     });
@@ -160,15 +160,15 @@ const App = () => {
           if (field.name === 'allow_dropship_return' && updatedItem[field.name] !== undefined) {
               updatedItem[field.name] = updatedItem[field.name] === 'True' || updatedItem[field.name] === true;
           }
-          // 如果 URL 字段为空字符串、undefined 或 null，将其设置为 null
+          // Convert empty string URL fields to null
           if (field.type === 'url') {
             if (updatedItem[field.name] === null || updatedItem[field.name] === undefined || String(updatedItem[field.name]).trim() === '') {
               updatedItem[field.name] = null;
             }
           }
-          // **修改**：如果非强制必填的 text 或 textarea 字段为空字符串或只含空白符，将其设置为 null
-          if ((field.type === 'text' || field.type === 'textarea')) { // removed !field.isMandatory condition here as it is not strictly needed for this transform
-            if (updatedItem[field.name] !== undefined && updatedItem[field.name] !== null && String(updatedItem[field.name]).trim() === '') {
+          // Convert empty string UOM field to null
+          if (field.name === 'UOM') {
+            if (updatedItem[field.name] === '') {
               updatedItem[field.name] = null;
             }
           }
@@ -331,21 +331,17 @@ const App = () => {
             acc[field.name] = null;
         } else if (field.type === 'select') {
             let selectDefault = null;
-            if (field.defaultValue !== undefined) {
-                selectDefault = field.defaultValue;
-            } else if (field.options && field.options.length > 0) {
+            if (field.options && field.options.length > 0) {
                 selectDefault = field.options[0].value;
             }
             acc[field.name] = selectDefault;
         } else if (field.type === 'url') {
-            acc[field.name] = ''; // URL字段默认显示为空字符串，而不是null
-        } else if (field.type === 'text' || field.type === 'textarea') { // text/textarea字段默认显示为空字符串
-            acc[field.name] = '';
+            acc[field.name] = ''; // URL field displays as empty string by default, not null
         } else {
-            if (field.isMandatory) {
+            if (field.isMandatory && field.name !== 'UOM') { // UOM is mandatory but can be null/empty
                 acc[field.name] = '';
             } else {
-                acc[field.name] = null;
+                acc[field.name] = null; // Non-mandatory fields and UOM default to null
             }
         }
         return acc;
@@ -466,15 +462,15 @@ const App = () => {
         if (field.name === 'allow_dropship_return' && submissionValues[field.name] !== undefined) {
           submissionValues[field.name] = submissionValues[field.name] === 'True' || submissionValues[field.name] === true;
         }
-        // 如果 URL 字段为空字符串、undefined 或 null，将其设置为 null
+        // Convert empty string URL fields to null
         if (field.type === 'url') {
           if (submissionValues[field.name] === null || submissionValues[field.name] === undefined || String(submissionValues[field.name]).trim() === '') {
             submissionValues[field.name] = null;
           }
         }
-        // **修改**：如果非强制必填的 text 或 textarea 字段为空字符串或只含空白符，将其设置为 null
-        if ((field.type === 'text' || field.type === 'textarea')) { // removed !field.isMandatory condition here as it is not strictly needed for this transform
-          if (submissionValues[field.name] !== undefined && submissionValues[field.name] !== null && String(submissionValues[field.name]).trim() === '') {
+        // Convert empty string UOM field to null
+        if (field.name === 'UOM') {
+          if (submissionValues[field.name] === '') {
             submissionValues[field.name] = null;
           }
         }
@@ -716,7 +712,7 @@ const App = () => {
     }
   };
 
-  // 过滤数据源以支持搜索功能
+  // Filter data source to support search function
   const filteredDataSource = dataSource.filter(item =>
     Object.values(item).some(value =>
       String(value).toLowerCase().includes(searchText.toLowerCase())
@@ -734,7 +730,7 @@ const App = () => {
 
   return (
     <ConfigProvider locale={antdLocales[i18n.language]}>
-      {/* 添加 classname 根据语言动态调整表格头部对齐 */}
+      {/* Add classname to dynamically adjust table header alignment based on language */}
       <div className={`App ${i18n.language === 'zh' ? 'lang-zh' : ''}`}>
         <div className="header-container">
             <div className="logo-title-container">
@@ -742,7 +738,7 @@ const App = () => {
                 <h1 className={`header-title ${i18n.language === 'zh' ? 'zh' : ''}`}>{t('systemTitle')}</h1>
             </div>
             <div className="header-right">
-                {/* 新增官网链接 */}
+                {/* New official website link */}
                 <a
                     href="https://xuanzi2023.wixsite.com/jfjp"
                     target="_blank"
@@ -751,7 +747,7 @@ const App = () => {
                 >
                     {t('officialWebsite')}
                 </a>
-                {/* 语言切换按钮 */}
+                {/* Language toggle button */}
                 <Space className="language-selector">
                     <Button
                         onClick={toggleLanguage}
@@ -796,7 +792,7 @@ const App = () => {
                 <Button icon={<ExportOutlined />} onClick={handleExport}>
                     {t('exportAll')}
                 </Button>
-                {/* 将搜索框放到这里 */}
+                {/* Place search bar here */}
                 <div className="search-bar-container">
                     <Input
                         prefix={<SearchOutlined />}
@@ -861,7 +857,7 @@ const App = () => {
           apiFieldErrors={formApiFieldErrors}
           showAllMode={true}
         />
-        {/* 现有版权信息 */}
+        {/* Existing copyright information */}
         <footer style={{ textAlign: 'center', marginTop: '20px', color: '#888' }}>
           © {new Date().getFullYear()} by JFJP.
         </footer>
