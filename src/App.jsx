@@ -794,7 +794,7 @@ const App = () => {
                 pageSizeOptions: ['15', '20', '50', '100', '200'],
                 showSizeChanger: true,
                 defaultPageSize: 15,
-                showTotal: (total, range) => `<span class="math-inline">\{range\[0\]\}\-</span>{range[1]} / ${total} ${t('common.records')}`,
+                showTotal: (total, range) => `${range[0]}-${range[1]} / ${total} ${t('common.records')}`,
               }}
             footer={() => (
               <div style={{ textAlign: 'center' }}>
