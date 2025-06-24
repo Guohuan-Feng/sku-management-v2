@@ -34,7 +34,6 @@ const App = () => {
 
   const [editingKey, setEditingKey] = useState('');
   const [editingRowData, setEditingRowData] = useState({});
-
   const [isViewAllModalOpen, setIsViewAllModalOpen] = useState(false);
   const [viewingSku, setViewingSku] = useState(null);
   const [searchText, setSearchText] = useState('');
@@ -691,17 +690,17 @@ const App = () => {
     message.success(t('messages.skuExported'));
   };
 
-  const handleCsvUpload = async (options) => {
+  const handleExcelUpload = async (options) => { // 将函数名从 handleCsvUpload 改为 handleExcelUpload
     const { file, onSuccess, onError } = options;
     setLoading(true);
     setErrorMessages([]);
     try {
-      const response = await uploadSkuCsv(file);
+      const response = await uploadSkuCsv(file); // 后端API名称不变，依然是uploadSkuCsv
       onSuccess(response, file);
       message.success(t('messages.csvUploadSuccess', { fileName: file.name }));
       fetchSkusWithHandling();
     } catch (error) {
-      console.error("CSV Upload failed:", error);
+      console.error("Excel Upload failed:", error); // 相应地修改日志
       let errorMessage = `${t('messages.csvUploadFailed', { fileName: file.name })}`;
       if (error.fieldErrors) {
         const detailedErrors = error.fieldErrors.map(fe => {
@@ -800,11 +799,11 @@ const App = () => {
                 </Button>
                 <Upload
                     ref={fileInputRef}
-                    customRequest={handleCsvUpload}
+                    customRequest={handleExcelUpload} // 从 handleCsvUpload 更改为 handleExcelUpload
                     showUploadList={false}
-                    accept=".csv"
+                    accept=".csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" // 修改 accept 属性以包含 .xls 和 .xlsx
                 >
-                    <Button icon={<UploadOutlined />}>{t('uploadCsv')}</Button>
+                    <Button icon={<UploadOutlined />}>{t('uploadCsv')}</Button> {/* 这里的文本会在i18n中修改 */}
                 </Upload>
                 <Button icon={<ExportOutlined />} onClick={handleExport}>
                     {t('exportAll')}
