@@ -83,6 +83,14 @@
     gap: 15px; /* 语言选择和退出登录按钮之间的间距 */
 }
 
+/* 统一头部按钮的高度 */
+.header-right .ant-btn {
+  height: 32px; /* 统一按钮高度 */
+  line-height: 32px;
+  padding: 0 15px;
+  font-size: 14px;
+}
+
 .language-selector {
     color: #666;
     font-size: 14px;

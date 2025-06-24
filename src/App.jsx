@@ -1,7 +1,7 @@
 // src/App.jsx
 import { useState, useEffect, useRef } from 'react';
 import './App.css';
-import { Table, ConfigProvider, Button, message, Upload, Space, Popconfirm, Alert, Form, Input } from 'antd';
+import { Table, ConfigProvider, Button, message, Upload, Space, Popconfirm, Alert, Form, Input, Divider } from 'antd'; // 导入 Divider
 import * as XLSX from 'xlsx';
 import { fieldsConfig, statusOptions, conditionOptions } from './components/fieldConfig';
 import { UploadOutlined, EditOutlined, DeleteOutlined, PlusOutlined, ExportOutlined, SaveOutlined, CloseOutlined, EyeOutlined, SearchOutlined } from '@ant-design/icons';
@@ -762,6 +762,8 @@ const App = () => {
                 >
                     {t('officialWebsite')}
                 </a>
+                {/* 添加分割线 */}
+                <Divider type="vertical" style={{ height: '20px', borderColor: '#ccc' }} /> 
                 {/* Language toggle button */}
                 <Space className="language-selector">
                     <Button
