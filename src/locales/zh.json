@@ -6,7 +6,7 @@
     "officialWebsite": "官网",
     "operationInfoErrors": "操作信息 / 错误",
     "createSkuModal": "创建 SKU (弹窗)",
-    "uploadCsv": "上传 CSV",
+    "uploadCsv": "导入 Excel", 
     "exportAll": "导出所有",
     "searchPlaceholder": "按 SKU、UPC 或名称搜索",
     "tableFooterAddInline": "添加新 SKU (行内)",
