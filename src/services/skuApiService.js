@@ -1,8 +1,8 @@
 // src/services/skuApiService.js
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://vp.jfj.ai/JFJP/skus';
-const AUTH_API_BASE_URL = import.meta.env.VITE_AUTH_API_BASE_URL || 'https://vp.jfj.ai/JFJP/auth';
-const AI_API_BASE_URL = import.meta.env.VITE_AI_API_BASE_URL || 'https://vp.jfj.ai/JFJP';
+const API_BASE_URL = 'https://vp.jfj.ai/JFJP/skus';
+const AUTH_API_BASE_URL = 'https://vp.jfj.ai/JFJP/auth';
+const AI_API_BASE_URL = 'https://vp.jfj.ai/JFJP';
 const CUSTOM_SECRET_KEY = import.meta.env.VITE_CUSTOM_SECRET_KEY;
 
 // 辅助函数：获取当前 access token, refresh token 和过期时间
@@ -179,7 +179,7 @@ const request = async (url, options = {}) => {
 // 以下是所有导出 API 函数的修改，都将使用 `request` 函数
 
 export const getAllSkus = async (page = 1, pageSize = 10, search = '') => {
-  const url = new URL(`${API_BASE_URL}/`);
+  const url = new URL(`${API_BASE_URL}/get-all-sku`);
   url.searchParams.append('page', page);
   url.searchParams.append('page_size', pageSize);
   if (search) {
@@ -189,21 +189,21 @@ export const getAllSkus = async (page = 1, pageSize = 10, search = '') => {
 };
 
 export const createSku = async (skuData) => {
-  return request(`${API_BASE_URL}/`, {
+  return request(`${API_BASE_URL}/create-sku`, {
     method: 'POST',
     body: JSON.stringify(skuData),
   });
 };
 
 export const updateSku = async (id, skuData) => {
-  return request(`${API_BASE_URL}/${id}`, {
+  return request(`${API_BASE_URL}/update/${id}`, {
     method: 'PUT',
     body: JSON.stringify(skuData),
   });
 };
 
 export const deleteSku = async (id) => {
-  return request(`${API_BASE_URL}/${id}`, {
+  return request(`${API_BASE_URL}/delete/${id}`, {
     method: 'DELETE',
   });
 };

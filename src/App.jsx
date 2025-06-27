@@ -65,7 +65,7 @@ const App = () => {
     setErrorMessages([]);
     try {
       const data = await getAllSkus();
-      setDataSource(data.map(item => ({ ...item, key: item.id })));
+      setDataSource(data.data.map(item => ({ ...item, key: item.id }))); // 访问 data.data
       message.success(t('messages.skuDataLoaded'));
     } catch (error) {
       console.error("Failed to fetch SKUs:", error);
