@@ -1,152 +1,147 @@
 // src/components/AuthForm.jsx
-import React, { useState, useEffect } from 'react';
-import { Form, Input, Button, Card, Typography, message, Divider } from 'antd';
-import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons';
-import { registerUser, loginUser } from '../services/skuApiService';
-
-const { Title } = Typography;
-
-// 注释掉或移除 Base64 编码的常量，因为我们现在使用 CDN 链接
-// const GOOGLE_LOGO_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAAAA...";
-
-// Google CDN 图标链接
-const GOOGLE_LOGO_CDN_URL = "https://img.icons8.com/color/48/google-logo.png";
+import React, { useState } from 'react';
+import { Form, Input, Button, message, Alert, Tabs } from 'antd';
+import { useTranslation } from 'react-i18next';
+import { loginUser, registerUser } from '../services/skuApiService';
 
 const AuthForm = ({ onAuthSuccess }) => {
-  const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
-  const [form] = Form.useForm();
+  const [error, setError] = useState('');
+  const [activeTab, setActiveTab] = useState('login');
 
-  // Google Identity Services 初始化占位符 (前端部分)
-  useEffect(() => {
-    console.log('Google Identity Services 初始化占位符...');
-  }, []);
-
-  const handleSubmit = async (values) => {
+  const onFinish = async (values) => {
     setLoading(true);
+    setError('');
     try {
-      let response;
-      if (isRegisterMode) {
-        response = await registerUser(values.email, values.password);
-        message.success('注册成功！请登录。');
-        setIsRegisterMode(false);
-      } else {
-        response = await loginUser(values.email, values.password);
-        localStorage.setItem('access_token', response.access_token);
-        message.success('登录成功！');
-        onAuthSuccess();
+      if (activeTab === 'register') {
+        const data = await registerUser(values.username, values.password);
+        if (data && data.message) {
+          message.success(t('registerSuccess'));
+          setActiveTab('login'); // 注册成功后切换到登录页
+        } else {
+          message.error(t('registerFailed'));
+        }
+      } else { // Login
+        // 假设 loginUser 返回 { message: "Authenticate pass.", data: { refresh_token, access_token, token_type, expires_in } }
+        const response = await loginUser(values.username, values.password); // loginUser现在返回完整的response
+        if (response && response.data && response.data.access_token) {
+          const { access_token, refresh_token, expires_in } = response.data;
+          
+          localStorage.setItem('access_token', access_token);
+          localStorage.setItem('refresh_token', refresh_token); // 存储 refresh_token
+          
+          // 如果后端提供了 access_token 的 expires_in (秒)，存储其过期时间戳（毫秒）
+          if (expires_in) {
+            const expiryTime = Date.now() + expires_in * 1000; 
+            localStorage.setItem('token_expiry_time', expiryTime.toString());
+          }
+
+          onAuthSuccess();
+          message.success(t('loginSuccess'));
+        } else {
+          message.error(t('loginFailed'));
+        }
       }
-      form.resetFields();
     } catch (error) {
-      console.error('认证失败:', error);
-      message.error(`认证失败: ${error.message || '请检查邮箱和密码。'}`);
+      console.error('Authentication error:', error);
+      setError(error.message || t('authFailed'));
+      message.error(error.message || t('authFailed'));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGoogleLogin = () => {
-    message.info('点击 Google 登录按钮。此功能需要后端集成 Google OAuth。');
-  };
-
-  return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: '#f0f2f5' }}>
-      <Card style={{ width: 400, padding: '20px' }}>
-        <Title level={3} style={{ textAlign: 'center', marginBottom: '24px' }}>
-          {isRegisterMode ? '注册' : '登录'}
-        </Title>
+  const items = [
+    {
+      key: 'login',
+      label: t('login'),
+      children: (
         <Form
-          form={form}
-          name="auth_form"
+          name="login"
           initialValues={{ remember: true }}
-          onFinish={handleSubmit}
+          onFinish={onFinish}
           autoComplete="off"
         >
           <Form.Item
-            name="email"
-            rules={[
-              { required: true, message: '请输入您的邮箱！' },
-              { type: 'email', message: '请输入有效的邮箱地址！' },
-            ]}
+            name="username"
+            rules={[{ required: true, message: t('pleaseInputUsername') }]}
           >
-            <Input prefix={<MailOutlined />} placeholder="邮箱" />
+            <Input placeholder={t('username')} />
           </Form.Item>
 
           <Form.Item
             name="password"
-            rules={[
-              { required: true, message: '请输入您的密码！' },
-              { min: 6, message: '密码至少需要6个字符！' },
-            ]}
+            rules={[{ required: true, message: t('pleaseInputPassword') }]}
           >
-            <Input.Password prefix={<LockOutlined />} placeholder="密码" />
+            <Input.Password placeholder={t('password')} />
           </Form.Item>
-
-          {isRegisterMode && (
-            <Form.Item
-              name="confirmPassword"
-              dependencies={['password']}
-              hasFeedback
-              rules={[
-                { required: true, message: '请确认您的密码！' },
-                ({ getFieldValue }) => ({
-                  validator(_, value) {
-                    if (!value || getFieldValue('password') === value) {
-                      return Promise.resolve();
-                    }
-                    return Promise.reject(new Error('两次输入的密码不一致！'));
-                  },
-                }),
-              ]}
-            >
-              <Input.Password prefix={<LockOutlined />} placeholder="确认密码" />
-            </Form.Item>
-          )}
 
           <Form.Item>
             <Button type="primary" htmlType="submit" loading={loading} block>
-              {isRegisterMode ? '注册' : '登录'}
-            </Button>
-          </Form.Item>
-
-          <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-            <Button type="link" onClick={() => setIsRegisterMode(!isRegisterMode)}>
-              {isRegisterMode ? '已有账号？去登录' : '没有账号？去注册'}
-            </Button>
-          </div>
-
-          <Divider plain>或者</Divider>
-
-          <Form.Item style={{ display: 'none' }}>
-            <Button
-              type="default"
-              onClick={handleGoogleLogin}
-              block
-              // 自定义样式以匹配您提供的 Google 按钮的外观
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: '40px',
-                backgroundColor: '#fff',
-                color: '#3c4043',
-                borderColor: '#dadce0',
-                boxShadow: '0 1px 1px 0 rgba(0,0,0,.04), 0 1px 3px 0 rgba(0,0,0,.08)',
-                fontWeight: '500',
-                fontSize: '14px',
-                borderRadius: '4px',
-              }}
-            >
-              <img
-                src={GOOGLE_LOGO_CDN_URL} // 使用 CDN 链接作为 src
-                alt="Google G Logo"
-                style={{ width: '18px', height: '18px', marginRight: '8px' }} // 设置合适的尺寸
-              />
-              继续使用 Google 登录
+              {t('login')}
             </Button>
           </Form.Item>
         </Form>
-      </Card>
+      ),
+    },
+    {
+      key: 'register',
+      label: t('register'),
+      children: (
+        <Form
+          name="register"
+          initialValues={{ remember: true }}
+          onFinish={onFinish}
+          autoComplete="off"
+        >
+          <Form.Item
+            name="username"
+            rules={[{ required: true, message: t('pleaseInputUsername') }]}
+          >
+            <Input placeholder={t('username')} />
+          </Form.Item>
+
+          <Form.Item
+            name="password"
+            rules={[{ required: true, message: t('pleaseInputPassword') }]}
+          >
+            <Input.Password placeholder={t('password')} />
+          </Form.Item>
+
+          <Form.Item
+            name="confirm"
+            dependencies={['password']}
+            hasFeedback
+            rules={[
+              { required: true, message: t('pleaseConfirmPassword') },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue('password') === value) {
+                    return Promise.resolve();
+                  }
+                  return Promise.reject(new Error(t('passwordsDoNotMatch')));
+                },
+              }),
+            ]}
+          >
+            <Input.Password placeholder={t('confirmPassword')} />
+          </Form.Item>
+
+          <Form.Item>
+            <Button type="primary" htmlType="submit" loading={loading} block>
+              {t('register')}
+            </Button>
+          </Form.Item>
+        </Form>
+      ),
+    },
+  ];
+
+  return (
+    <div style={{ maxWidth: 400, margin: '50px auto', padding: 20, border: '1px solid #eee', borderRadius: 8 }}>
+      <Tabs activeKey={activeTab} onChange={setActiveTab} items={items} centered />
+      {error && <Alert message={error} type="error" showIcon style={{ marginBottom: 20 }} />}
     </div>
   );
 };

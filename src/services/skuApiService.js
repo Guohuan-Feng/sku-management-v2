@@ -1,179 +1,255 @@
 // src/services/skuApiService.js
 
-const API_BASE_URL = 'https://vp.jfj.ai/JFJP/skus';
-const AUTH_API_BASE_URL = 'https://vp.jfj.ai/JFJP/auth';
-const AI_API_BASE_URL = 'https://vp.jfj.ai/JFJP';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://vp.jfj.ai/JFJP/skus';
+const AUTH_API_BASE_URL = import.meta.env.VITE_AUTH_API_BASE_URL || 'https://vp.jfj.ai/JFJP/auth';
+const AI_API_BASE_URL = import.meta.env.VITE_AI_API_BASE_URL || 'https://vp.jfj.ai/JFJP';
+const CUSTOM_SECRET_KEY = import.meta.env.VITE_CUSTOM_SECRET_KEY;
 
-// 从环境变量中获取自定义密钥
-// 假设你的环境变量名为 VITE_CUSTOM_SECRET_KEY
-// 请确保你在 .env 文件中定义了 VITE_CUSTOM_SECRET_KEY=D5AbZ2aUBJ0NSJP2Gm!Bk02
-const CUSTOM_SECRET_VALUE = import.meta.env.VITE_CUSTOM_SECRET_KEY;
+// 辅助函数：获取当前 access token, refresh token 和过期时间
+const getAuthTokens = () => {
+  const accessToken = localStorage.getItem('access_token');
+  const refreshToken = localStorage.getItem('refresh_token'); // 获取 refresh token
+  const expiryTime = localStorage.getItem('token_expiry_time');
+  return { accessToken, refreshToken, expiryTime: expiryTime ? parseInt(expiryTime, 10) : null };
+};
 
-// 辅助函数处理 API 响应
-const handleResponse = async (response) => {
-  let responseData = null; // 用于存储解析后的 JSON 数据
-  let rawResponseText = null; // 用于存储原始响应文本，以防 JSON 解析失败
+// 辅助函数：设置 access token, refresh token 和过期时间
+const setAuthTokens = (accessToken, refreshToken, expiresIn) => {
+  localStorage.setItem('access_token', accessToken);
+  localStorage.setItem('refresh_token', refreshToken); // 设置 refresh token
+  if (expiresIn) {
+    const expiryTime = Date.now() + expiresIn * 1000; // expiresIn 是秒，转换为毫秒时间戳
+    localStorage.setItem('token_expiry_time', expiryTime.toString());
+  } else {
+    localStorage.removeItem('token_expiry_time');
+  }
+};
+
+// 辅助函数：清除所有认证令牌
+const clearAuthTokens = () => {
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token'); // 清除 refresh token
+  localStorage.removeItem('token_expiry_time');
+};
+
+// 全局变量，用于防止同时发起多个刷新请求
+let isRefreshing = false;
+let failedQueue = []; // 存储因令牌过期而失败的请求
+
+// 处理队列中的请求
+const processQueue = (error, accessToken = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(accessToken);
+    }
+  });
+  failedQueue = [];
+};
+
+// 令牌刷新函数
+const refreshToken = async () => {
+  if (isRefreshing) {
+    return new Promise((resolve, reject) => {
+      failedQueue.push({ resolve, reject });
+    });
+  }
+
+  isRefreshing = true;
 
   try {
-    // 克隆响应，以便可以读取两次（一次尝试JSON，一次尝试文本）
-    const clonedResponse = response.clone();
+    const { refreshToken: currentRefreshToken } = getAuthTokens(); // 获取 refresh token
+    if (!currentRefreshToken) {
+      clearAuthTokens();
+      throw new Error('No refresh token available. Please log in.');
+    }
 
-    // 对于 204 No Content，通常没有响应体，直接返回预定义成功信息
-    if (response.status === 204) {
-      responseData = { success: true, message: '操作成功完成，无内容返回。' };
+    const response = await fetch(`${AUTH_API_BASE_URL}/refresh-token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Custom-Secret': CUSTOM_SECRET_KEY,
+        // The refresh token is sent in the body, not Authorization header typically
+      },
+      body: JSON.stringify({ refresh_token: currentRefreshToken }), // 在请求体中发送 refresh_token
+    });
+
+    if (!response.ok) {
+      clearAuthTokens(); // 如果刷新失败，清除所有令牌
+      throw new Error(`Refresh token failed with status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    if (data && data.access_token) {
+      // 假设刷新接口返回新的 access_token 和可能更新的 refresh_token 以及 expires_in
+      setAuthTokens(data.access_token, data.refresh_token || currentRefreshToken, data.expires_in);
+      processQueue(null, data.access_token); // 成功后处理队列
+      return data.access_token;
     } else {
-      try {
-        // 尝试将响应解析为 JSON
-        responseData = await response.json();
-      } catch (jsonParseError) {
-        // 如果 JSON 解析失败 (例如后端返回纯文本错误)，则读取原始文本
-        rawResponseText = await clonedResponse.text();
-        // 打印前端警告和原始文本到控制台
-        console.warn(`[前端警告] API Response JSON Parsing Failed (Status: ${response.status}). Raw Text:`, rawResponseText);
-        // 如果无法解析 JSON，但响应是成功的（例如，意外的 200 OK 但返回了非 JSON），
-        // 我们可以将原始文本视为数据返回，或者根据业务需求进行更严格的错误处理。
-        // 这里为了确保后续错误处理能继续，我们不直接抛出 jsonParseError，而是依赖 response.ok
+      clearAuthTokens();
+      throw new Error('Refresh token response missing access_token');
+    }
+  } catch (error) {
+    clearAuthTokens();
+    processQueue(error); // 失败后处理队列
+    throw error;
+  } finally {
+    isRefreshing = false;
+  }
+};
+
+// 响应处理函数（保持不变，由 request 调用）
+const handleResponse = async (response) => {
+  if (response.headers.get('content-type')?.includes('application/json')) {
+    const data = await response.json();
+
+    if (!response.ok) {
+      let errorMessage = data.detail || response.statusText;
+      if (data.errors) { // For FastAPI validation errors
+        errorMessage = data.errors.map(err => `${err.loc.join('.')} ${err.msg}`).join('; ');
       }
+      const error = new Error(errorMessage);
+      error.status = response.status;
+      error.data = data;
+      throw error;
     }
-  } catch (e) {
-    // 捕获读取响应体时发生的任何其他错误（例如网络中断）
-    console.error('[前端错误] API Response Handling Error during content read:', e);
-    // 使用原始状态文本或通用错误消息来抛出，确保有错误信息
-    const errorMsg = rawResponseText || response.statusText || '发生未知错误，响应无法读取。';
-    const genericError = new Error(errorMsg);
-    genericError.status = response.status;
-    throw genericError;
-  }
-
-  // 无论成功与否，如果成功解析了 JSON 或获取了原始文本，都在控制台打印
-  // 这会显示后端返回的原始数据结构或原始文本
-  if (responseData) {
-    console.log(`[前端日志] 后端原始 JSON 响应 (HTTP Status: ${response.status}):`, responseData);
-  } else if (rawResponseText) {
-    // 如果 JSON 未能解析，但获取到了原始文本，则打印原始文本
-    console.log(`[前端日志] 后端原始非 JSON 响应 (HTTP Status: ${response.status}):`, rawResponseText);
-  }
-
-  if (!response.ok) {
-    // 如果响应状态码表示失败 (response.ok 为 false)
-    // 检查是否为 FastAPI 的 422 校验错误，并提取详细信息
-    if (response.status === 422 && responseData && responseData.detail && Array.isArray(responseData.detail)) {
-      const err = new Error('校验失败，请检查表单字段。');
-      err.fieldErrors = responseData.detail; // { loc: ["body", "field_name"], msg: "..." }
-      err.status = response.status;
-      console.error('[前端错误] API 校验错误 (来自后端):', err.fieldErrors, '状态码:', response.status);
-      throw err;
+    return data;
+  } else {
+    // Handle non-JSON responses (e.g., successful upload without JSON body)
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-
-    // 处理其他非 2xx 状态码的错误
-    // 优先使用后端返回的 detail 字段，其次是原始文本，最后是状态文本
-    const errorMessage = (responseData && responseData.detail) || (responseData && (typeof responseData === 'string' ? responseData : JSON.stringify(responseData))) || rawResponseText || response.statusText || 'API 请求失败';
-    console.error('[前端错误] API 请求失败 (来自后端):', errorMessage, '状态码:', response.status, '完整响应内容:', responseData || rawResponseText);
-    const genericError = new Error(errorMessage);
-    genericError.status = response.status; // 也为通用错误添加状态码
-    throw genericError;
+    return response.text(); // Return text for non-json success
   }
-
-  // 如果响应成功 (response.ok 为 true)，返回解析后的数据
-  // 如果是 204 或 JSON 解析失败但状态码是 2xx (理论上不应该，但以防万一)，这里会返回相应的值
-  return responseData;
 };
 
-// 辅助函数，用于获取包含通用 header 的 fetch 选项
-const getAuthHeaders = () => {
+
+// 通用请求函数，包含认证和刷新逻辑
+const request = async (url, options = {}) => {
+  let { accessToken, expiryTime } = getAuthTokens();
+  const now = Date.now();
+  const REFRESH_THRESHOLD = 5 * 60 * 1000; // 在 access_token 过期前 5 分钟刷新
+
+  // 检查 access_token 是否存在且是否即将过期
+  if (accessToken && expiryTime && expiryTime < now + REFRESH_THRESHOLD) {
+    try {
+      accessToken = await refreshToken(); // 尝试刷新 access_token
+    } catch (refreshError) {
+      console.error('Failed to refresh access token before request:', refreshError);
+      // 如果刷新失败，这意味着当前令牌可能已完全失效，需要用户重新登录
+      clearAuthTokens();
+      throw new Error('Authentication required: Token refresh failed.');
+    }
+  }
+
   const headers = {
-    'Content-Type': 'application/json',
+    'Content-Type': 'application/json', // 默认 Content-Type
+    'X-Custom-Secret': CUSTOM_SECRET_KEY,
+    ...options.headers, // 允许覆盖或添加其他头
   };
-  if (CUSTOM_SECRET_VALUE) {
-    headers['X-Custom-Secret'] = CUSTOM_SECRET_VALUE; // header 名称保持为 "X-Custom-Secret"
+
+  // 如果有 access_token，添加到 Authorization 头
+  if (accessToken) {
+    headers['Authorization'] = `Bearer ${accessToken}`;
   }
-  return headers;
+
+  const config = {
+    ...options,
+    headers,
+  };
+
+  try {
+    const response = await fetch(url, config);
+
+    // 如果收到 401 Unauthorized，清除令牌并抛出错误
+    if (response.status === 401) {
+      clearAuthTokens();
+      throw new Error('Unauthorized: Please log in again.');
+    }
+
+    return await handleResponse(response);
+  } catch (error) {
+    console.error('Request failed:', error);
+    throw error;
+  }
 };
 
 
-// 获取所有 SKU 的 API 调用
-export const getAllSkus = async () => {
-  const response = await fetch(`${API_BASE_URL}/get-all-sku`, {
-    headers: getAuthHeaders(),
-  });
-  return handleResponse(response);
+// 以下是所有导出 API 函数的修改，都将使用 `request` 函数
+
+export const getAllSkus = async (page = 1, pageSize = 10, search = '') => {
+  const url = new URL(`${API_BASE_URL}/`);
+  url.searchParams.append('page', page);
+  url.searchParams.append('page_size', pageSize);
+  if (search) {
+    url.searchParams.append('search', search);
+  }
+  return request(url.toString());
 };
 
-// 创建 SKU 的 API 调用
 export const createSku = async (skuData) => {
-  const response = await fetch(`${API_BASE_URL}/create-sku`, {
+  return request(`${API_BASE_URL}/`, {
     method: 'POST',
-    headers: getAuthHeaders(),
     body: JSON.stringify(skuData),
   });
-  return handleResponse(response);
 };
 
-// 更新 SKU 的 API 调用
-export const updateSku = async (skuId, skuData) => {
-  const response = await fetch(`${API_BASE_URL}/update/${skuId}`, {
+export const updateSku = async (id, skuData) => {
+  return request(`${API_BASE_URL}/${id}`, {
     method: 'PUT',
-    headers: getAuthHeaders(),
     body: JSON.stringify(skuData),
   });
-  return handleResponse(response);
 };
 
-// 删除 SKU 的 API 调用
-export const deleteSku = async (skuId) => {
-  const response = await fetch(`${API_BASE_URL}/delete/${skuId}`, {
+export const deleteSku = async (id) => {
+  return request(`${API_BASE_URL}/${id}`, {
     method: 'DELETE',
-    headers: getAuthHeaders(),
   });
-  return handleResponse(response);
 };
 
-// 上传 SKU CSV 的 API 调用
-export const uploadSkuCsv = async (file) => {
-  const formData = new FormData();
-  formData.append('file', file);
+export const deleteMultipleSkus = async (ids) => {
+  return request(`${API_BASE_URL}/batch`, {
+    method: 'DELETE',
+    body: JSON.stringify({ ids }),
+  });
+};
 
-  // 对于 FormData，Content-Type 通常由浏览器自动设置，不需要手动设置 'application/json'
-  // 因此，这里的 headers 只需要包含自定义密钥
-  const headers = {};
-  if (CUSTOM_SECRET_VALUE) {
-      headers['X-Custom-Secret'] = CUSTOM_SECRET_VALUE; // header 名称保持为 "X-Custom-Secret"
-  }
-
-  const response = await fetch(`${API_BASE_URL}/uploads`, {
+export const uploadSkuCsv = async (formData) => {
+  return request(`${API_BASE_URL}/upload-csv`, {
     method: 'POST',
-    headers: headers, // 传递手动创建的 headers
     body: formData,
+    headers: {
+      'Content-Type': undefined, // 让浏览器自动设置 multipart/form-data
+    },
   });
-  return handleResponse(response);
 };
 
-// 调用 AI 生成描述的 API
-export const generateAIDescription = async (data) => {
-  const response = await fetch(`${AI_API_BASE_URL}/AI-generate-desc`, {
+export const loginUser = async (email, password) => { // 将 username 改为 email
+  const response = await request(`${AUTH_API_BASE_URL}/login`, {
     method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(data),
+    body: JSON.stringify({ email, password }), // 将 username 改为 email
+    headers: {
+      'Authorization': undefined,
+    },
   });
-  return handleResponse(response);
+  return response;
 };
 
-// 新增: 用户注册 API 调用
 export const registerUser = async (email, password) => {
-  const response = await fetch(`${AUTH_API_BASE_URL}/register`, {
+  // 注册请求不需要 Authorization 头
+  return request(`${AUTH_API_BASE_URL}/register`, {
     method: 'POST',
-    headers: getAuthHeaders(),
     body: JSON.stringify({ email, password }),
+    headers: {
+      'Authorization': undefined, // 注册时明确不带 Authorization 头
+    },
   });
-  return handleResponse(response);
 };
 
-// 新增: 用户登录 API 调用
-export const loginUser = async (email, password) => {
-  const response = await fetch(`${AUTH_API_BASE_URL}/login`, {
+export const generateAIDescription = async (skuDetails) => {
+  return request(`${AI_API_BASE_URL}/AI-generate-desc`, {
     method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify(skuDetails),
   });
-  return handleResponse(response);
 };
