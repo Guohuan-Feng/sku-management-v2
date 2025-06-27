@@ -690,20 +690,29 @@ const App = () => {
     message.success(t('messages.skuExported'));
   };
 
-  const handleExcelUpload = async (options) => { // 将函数名从 handleCsvUpload 改为 handleExcelUpload
+  const handleExcelUpload = async (options) => {
     const { file, onSuccess, onError } = options;
     setLoading(true);
     setErrorMessages([]);
     try {
-      const response = await uploadSkuCsv(file); // 后端API名称不变，依然是uploadSkuCsv
+      // 创建 FormData 对象
+      const formData = new FormData();
+
+          // *** 在这里添加 console.log 来检查 file 对象 ***
+      console.log("File object received by handleExcelUpload:", file);
+      // 将文件添加到 FormData 中，字段名应与后端期望的一致，通常是 'file'
+      // 根据 sku_api.py 中的定义：file: UploadFile = File(...)，后端期望的字段名是 'file'
+      formData.append('file', file);
+  
+      const response = await uploadSkuCsv(formData); // 传递 FormData 对象
       onSuccess(response, file);
       message.success(t('messages.csvUploadSuccess', { fileName: file.name }));
       fetchSkusWithHandling();
     } catch (error) {
-      console.error("Excel Upload failed:", error); // 相应地修改日志
+      console.error("Excel Upload failed:", error);
       let errorMessage = `${t('messages.csvUploadFailed', { fileName: file.name })}`;
-      if (error.fieldErrors) {
-        const detailedErrors = error.fieldErrors.map(fe => {
+      if (error.data && error.data.detail && Array.isArray(error.data.detail)) {
+        const detailedErrors = error.data.detail.map(fe => {
           const fieldName = fe.loc && fe.loc.length > 1 ? fe.loc[fe.loc.length -1] : t('messages.unknownField');
           return `${fieldName}: ${fe.msg}`;
         }).join('; ');
@@ -802,7 +811,7 @@ const App = () => {
                     customRequest={handleExcelUpload} // 从 handleCsvUpload 更改为 handleExcelUpload
                     showUploadList={false}
                     accept=".csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" // 修改 accept 属性以包含 .xls 和 .xlsx
-                >
+                    name="file">
                     <Button icon={<UploadOutlined />}>{t('uploadCsv')}</Button> {/* 这里的文本会在i18n中修改 */}
                 </Upload>
                 <Button icon={<ExportOutlined />} onClick={handleExport}>

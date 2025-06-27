@@ -112,22 +112,48 @@ const handleResponse = async (response) => {
     const data = await response.json();
 
     if (!response.ok) {
-      let errorMessage = data.detail || response.statusText;
-      if (data.errors) { // For FastAPI validation errors
-        errorMessage = data.errors.map(err => `${err.loc.join('.')} ${err.msg}`).join('; ');
+      // 在这里打印完整的后端错误响应，以便调试
+      console.error("Backend Error Response Data:", data);
+
+      let errorMessage = response.statusText; // 默认使用状态文本
+
+      if (data && typeof data === 'object') {
+        if (data.detail) {
+          // FastAPI 常见错误格式，例如 HTTPException
+          if (Array.isArray(data.detail)) {
+            // 如果 detail 是一个数组 (FastAPI 验证错误常见)
+            errorMessage = data.detail.map(err => {
+              const loc = err.loc && err.loc.length > 0 ? err.loc[err.loc.length - 1] : 'unknown';
+              return `${loc}: ${err.msg}`;
+            }).join('; ');
+          } else if (typeof data.detail === 'string') {
+            // 如果 detail 是一个字符串
+            errorMessage = data.detail;
+          }
+        } else if (data.errors && Array.isArray(data.errors)) {
+          // 自定义错误格式，如果存在 errors 数组
+          errorMessage = data.errors.map(err => `${err.loc.join('.')} ${err.msg}`).join('; ');
+        } else if (data.message && typeof data.message === 'string') {
+          // 某些情况下后端可能返回 message 字段
+          errorMessage = data.message;
+        } else {
+          // 如果没有预期的字段，将整个对象转为字符串
+          errorMessage = JSON.stringify(data);
+        }
       }
+
       const error = new Error(errorMessage);
       error.status = response.status;
-      error.data = data;
+      error.data = data; // 附加原始的后端响应数据
       throw error;
     }
     return data;
   } else {
-    // Handle non-JSON responses (e.g., successful upload without JSON body)
+    // 处理非 JSON 响应（例如，没有 JSON 正文的成功上传）
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    return response.text(); // Return text for non-json success
+    return response.text(); // 返回非 JSON 成功的文本
   }
 };
 
@@ -150,11 +176,22 @@ const request = async (url, options = {}) => {
     }
   }
 
-  const headers = {
-    'Content-Type': 'application/json', // 默认 Content-Type
+  // --- 修改开始 ---
+  const defaultHeaders = {
     'X-Custom-Secret': CUSTOM_SECRET_KEY,
+  };
+
+  // 如果请求体不是 FormData，则设置 Content-Type 为 application/json
+  // 否则，让浏览器自动设置 multipart/form-data
+  if (!(options.body instanceof FormData)) {
+    defaultHeaders['Content-Type'] = 'application/json';
+  }
+
+  const headers = {
+    ...defaultHeaders,
     ...options.headers, // 允许覆盖或添加其他头
   };
+  // --- 修改结束 ---
 
   // 如果有 access_token，添加到 Authorization 头
   if (accessToken) {
@@ -223,12 +260,10 @@ export const deleteMultipleSkus = async (ids) => {
 };
 
 export const uploadSkuCsv = async (formData) => {
-  return request(`${API_BASE_URL}/upload-csv`, {
+  return request(`${API_BASE_URL}/uploads`, {
     method: 'POST',
     body: formData,
-    headers: {
-      'Content-Type': undefined, // 让浏览器自动设置 multipart/form-data
-    },
+    // 移除了这里的 Content-Type: undefined，因为 request 函数现在会正确处理 FormData
   });
 };
 
