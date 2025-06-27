@@ -23,6 +23,13 @@ const setAuthTokens = (accessToken, refreshToken, expiresIn) => {
   } else {
     localStorage.removeItem('token_expiry_time');
   }
+
+    // 在前端控制台打印认证信息
+    console.log("认证信息已更新:");
+    console.log("Access Token:", accessToken);
+    console.log("Refresh Token:", refreshToken);
+    console.log("Token Type:", "bearer"); // token_type 通常是固定的 'bearer'
+    console.log("Expires In (seconds):", expiresIn);
 };
 
 // 辅助函数：清除所有认证令牌
