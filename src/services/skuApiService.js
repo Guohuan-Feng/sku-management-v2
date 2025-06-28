@@ -162,7 +162,7 @@ const handleResponse = async (response) => {
 const request = async (url, options = {}) => {
   let { accessToken, expiryTime } = getAuthTokens();
   const now = Date.now();
-  const REFRESH_THRESHOLD = 5 * 60 * 1000; // 在 access_token 过期前 5 分钟刷新
+  const REFRESH_THRESHOLD = 30 * 60 * 1000; // 在 access_token 过期前 5 分钟刷新
 
   // 检查 access_token 是否存在且是否即将过期
   if (accessToken && expiryTime && expiryTime < now + REFRESH_THRESHOLD) {
