@@ -9,6 +9,7 @@
     "uploadCsv": "导入 Excel", 
     "exportAll": "导出所有",
     "searchPlaceholder": "按 SKU、UPC 或名称搜索",
+    "vendorPortalTemplate": "供应商门户模板",
     "tableFooterAddInline": "添加新 SKU (行内)",
     "tableOperations": {
       "edit": "编辑",

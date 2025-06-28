@@ -735,6 +735,36 @@ const App = () => {
     }
   };
 
+  // New function for downloading Vendor Portal Template
+  const handleDownloadTemplate = () => {
+    // This is the file name you want the downloaded file to have.
+    const fileNameForDownload = 'Vendor_Portal_Template.xlsx'; 
+    
+    // IMPORTANT: You must place your actual XLSX template file in the `public` folder of your Vite project.
+    // If your file is named 'Vendor Portal Template(2).xlsx - Sheet1.csv' as provided,
+    // and you want to download it as an XLSX, you should ideally convert it to actual XLSX format
+    // and rename it to 'Vendor_Portal_Template.xlsx' before placing it in the public folder.
+    // Assuming it's in the public folder, its URL will be relative to your app's root.
+    const fileUrl = `/${fileNameForDownload}`; 
+
+    try {
+      // Create a temporary anchor element
+      const link = document.createElement('a');
+      link.href = fileUrl;
+      link.setAttribute('download', fileNameForDownload); // This attribute suggests a filename for the download
+      
+      // Append the link to the document body, programmatically click it, then remove it.
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      message.success(t('messages.templateDownloadStarted'));
+    } catch (error) {
+      console.error('Download template failed:', error);
+      message.error(t('messages.failedToDownloadTemplate'));
+    }
+  };
+
   // Filter data source to support search function
   const filteredDataSource = dataSource.filter(item =>
     Object.values(item).some(value =>
@@ -814,6 +844,10 @@ const App = () => {
                     name="file">
                     <Button icon={<UploadOutlined />}>{t('uploadCsv')}</Button> {/* 这里的文本会在i18n中修改 */}
                 </Upload>
+                {/* 新添加的“Vendor Portal Template”按钮 */}
+                <Button icon={<ExportOutlined />} onClick={handleDownloadTemplate}>
+                    {t('vendorPortalTemplate')}
+                </Button>
                 <Button icon={<ExportOutlined />} onClick={handleExport}>
                     {t('exportAll')}
                 </Button>

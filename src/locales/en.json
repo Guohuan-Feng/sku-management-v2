@@ -8,6 +8,7 @@
     "createSkuModal": "Create SKU (Modal)",
     "uploadCsv": "Import Excel",  
     "exportAll": "Export All",
+    "vendorPortalTemplate": "Vendor Portal Template",
     "searchPlaceholder": "Search by SKU, UPC, or Name",
     "tableOperations": {
       "edit": "Edit",
