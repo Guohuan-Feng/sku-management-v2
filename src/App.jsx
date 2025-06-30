@@ -7,8 +7,8 @@ import { fieldsConfig, statusOptions, conditionOptions } from './components/fiel
 import { UploadOutlined, EditOutlined, DeleteOutlined, PlusOutlined, ExportOutlined, SaveOutlined, CloseOutlined, EyeOutlined, SearchOutlined } from '@ant-design/icons';
 import SkuFormModal from './components/SkuFormModal';
 import EditableCell from './components/EditableCell';
+import AuthForm from './components/AuthForm'; // 添加这一行
 import { getAllSkus, createSku, updateSku, deleteSku, uploadSkuCsv } from './services/skuApiService';
-import AuthForm from './components/AuthForm';
 
 // Import Ant Design language packs
 import enUS from 'antd/locale/en_US';
@@ -690,6 +690,19 @@ const App = () => {
     message.success(t('messages.skuExported'));
   };
 
+  // 新增的下载文本文件的辅助函数
+  const downloadTxtFile = (content, filename) => {
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url); // 清理 URL 对象
+  };
+
   const handleExcelUpload = async (options) => {
     const { file, onSuccess, onError } = options;
     setLoading(true);
@@ -698,8 +711,7 @@ const App = () => {
       // 创建 FormData 对象
       const formData = new FormData();
 
-          // *** 在这里添加 console.log 来检查 file 对象 ***
-      console.log("File object received by handleExcelUpload:", file);
+      console.log("File object received by handleExcelUpload:", file); //
       // 将文件添加到 FormData 中，字段名应与后端期望的一致，通常是 'file'
       // 根据 sku_api.py 中的定义：file: UploadFile = File(...)，后端期望的字段名是 'file'
       formData.append('file', file);
@@ -708,29 +720,45 @@ const App = () => {
       onSuccess(response, file);
       message.success(t('messages.csvUploadSuccess', { fileName: file.name }));
       fetchSkusWithHandling();
-    } catch (error) {
-      console.error("Excel Upload failed:", error);
-      let errorMessage = `${t('messages.csvUploadFailed', { fileName: file.name })}`;
-      if (error.data && error.data.detail && Array.isArray(error.data.detail)) {
-        const detailedErrors = error.data.detail.map(fe => {
-          const fieldName = fe.loc && fe.loc.length > 1 ? fe.loc[fe.loc.length -1] : t('messages.unknownField');
-          return `${fieldName}: ${fe.msg}`;
-        }).join('; ');
-        errorMessage += `${t('messages.validationErrors')}${detailedErrors}`;
-         setErrorMessages(prev => [...prev, `${t('messages.validationErrorsInFile', { fileName: file.name })}: ${detailedErrors}`]);
-      } else if (error.message) {
-        errorMessage += error.message;
-         setErrorMessages(prev => [...prev, `${t('messages.uploadError', { fileName: file.name })}: ${error.message}`]);
-      } else {
-        errorMessage += t('messages.unknownUploadError', { fileName: file.name });
-        setErrorMessages(prev => [...prev, `${t('messages.unknownUploadError', { fileName: file.name })}`]);
+
+      // 处理后端返回的数据并下载为TXT文件
+      if (response) {
+        const { success_count, failure_count, failures } = response; //
+        let txtContent = `SKU Upload Result for ${file.name}:\n`;
+        txtContent += `Success Count: ${success_count}\n`;
+        txtContent += `Failure Count: ${failure_count}\n`;
+        txtContent += `Failures:\n${JSON.stringify(failures, null, 2)}`; // 格式化 failures 数组
+
+        const now = new Date();
+        const timestamp = `${now.getFullYear().toString().slice(-2)}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}${now.getSeconds().toString().padStart(2, '0')}`;
+        const txtFileName = `SKU_Upload_Result_${timestamp}.txt`;
+        
+        downloadTxtFile(txtContent, txtFileName); // 调用辅助函数下载文件
       }
-      onError(error);
-      message.error(errorMessage, 10);
+
+    } catch (error) {
+      console.error("Excel Upload failed:", error); //
+      let errorMessage = `${t('messages.csvUploadFailed', { fileName: file.name })}`; //
+      if (error.data && error.data.detail && Array.isArray(error.data.detail)) { //
+        const detailedErrors = error.data.detail.map(fe => { //
+          const fieldName = fe.loc && fe.loc.length > 1 ? fe.loc[fe.loc.length -1] : t('messages.unknownField'); //
+          return `${fieldName}: ${fe.msg}`; //
+        }).join('; '); //
+        errorMessage += `${t('messages.validationErrors')}${detailedErrors}`; //
+         setErrorMessages(prev => [...prev, `${t('messages.validationErrorsInFile', { fileName: file.name })}: ${detailedErrors}`]); //
+      } else if (error.message) { //
+        errorMessage += error.message; //
+         setErrorMessages(prev => [...prev, `${t('messages.uploadError', { fileName: file.name })}: ${error.message}`]); //
+      } else { //
+        errorMessage += t('messages.unknownUploadError', { fileName: file.name }); //
+        setErrorMessages(prev => [...prev, `${t('messages.unknownUploadError', { fileName: file.name })}`]); //
+      }
+      onError(error); //
+      message.error(errorMessage, 10); //
     } finally {
-      setLoading(false);
-      if (fileInputRef.current && fileInputRef.current.fileList) {
-        fileInputRef.current.fileList = [];
+      setLoading(false); //
+      if (fileInputRef.current && fileInputRef.current.fileList) { //
+        fileInputRef.current.fileList = []; //
       }
     }
   };
