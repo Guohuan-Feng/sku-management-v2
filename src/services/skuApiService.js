@@ -2,7 +2,7 @@
 
 const API_BASE_URL = 'https://vp.jfj.ai/JFJP/skus';
 const AUTH_API_BASE_URL = 'https://vp.jfj.ai/JFJP/auth';
-const AI_API_BASE_URL = 'https://vp.jfj.ai/JFJP';
+const AI_API_BASE_URL = 'https://vp.jfj.ai/JFJP/AI'; // Updated AI API Base URL
 const CUSTOM_SECRET_KEY = import.meta.env.VITE_CUSTOM_SECRET_KEY;
 
 // 辅助函数：获取当前 access token, refresh token 和过期时间
@@ -112,13 +112,23 @@ const handleResponse = async (response) => {
     const data = await response.json();
 
     if (!response.ok) {
-      // 在这里打印完整的后端错误响应，以便调试
       console.error("Backend Error Response Data:", data);
 
       let errorMessage = response.statusText; // 默认使用状态文本
 
       if (data && typeof data === 'object') {
-        if (data.detail) {
+        // --- NEW/UPDATED: Check for the specific 'error' field format and extract message ---
+        if (data.error && typeof data.error === 'string') {
+          // Attempt to extract 'message' from the string "400: {'message': '...'}"
+          const match = data.error.match(/'message': '([^']+)'/);
+          if (match && match[1]) {
+            errorMessage = match[1];
+          } else {
+            errorMessage = data.error; // Fallback if regex doesn't match
+          }
+        }
+        // --- END NEW/UPDATED ---
+        else if (data.detail) {
           // FastAPI 常见错误格式，例如 HTTPException
           if (Array.isArray(data.detail)) {
             // 如果 detail 是一个数组 (FastAPI 验证错误常见)
@@ -293,5 +303,12 @@ export const generateAIDescription = async (skuDetails) => {
   return request(`${AI_API_BASE_URL}/AI-generate-desc`, {
     method: 'POST',
     body: JSON.stringify(skuDetails),
+  });
+};
+
+export const translateProductName = async (productCnName) => {
+  return request(`${AI_API_BASE_URL}/AI-generate-tran`, {
+    method: 'POST',
+    body: JSON.stringify({ product_cn_name: productCnName }),
   });
 };

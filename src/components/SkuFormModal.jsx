@@ -1,7 +1,7 @@
 // src/components/SkuFormModal.jsx
 import { Modal, Form, Input, Select, InputNumber, Button, Row, Col, message } from 'antd';
 import { useEffect, useState } from 'react'; // 引入 useEffect 和 useState
-import { generateAIDescription } from '../services/skuApiService';
+import { generateAIDescription, translateProductName } from '../services/skuApiService';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { fieldsConfig, statusOptions, conditionOptions } from './fieldConfig'; // 确保导入 fieldsConfig
@@ -31,6 +31,7 @@ const SkuFormModal = ({
   const { t } = useTranslation();
   const [form] = Form.useForm();
   const [aiLoading, setAiLoading] = useState(false);
+  const [translateLoading, setTranslateLoading] = useState(false); // 新增翻译加载状态
 
   // 改进的 useEffect，用于处理表单数据的加载和保存
   useEffect(() => {
@@ -281,6 +282,35 @@ const SkuFormModal = ({
     });
   };
 
+  // 新增翻译产品名函数
+  const handleTranslateProductName = async () => {
+    const productCnName = form.getFieldValue('product_cn_name');
+    // --- START DEBUG LOG ---
+    console.log('Product Chinese Name before API call:', productCnName);
+    // --- END DEBUG LOG ---
+
+    if (!productCnName || productCnName.trim() === '') {
+      message.warning(t('messages.inputChineseNameFirst'));
+      return;
+    }
+
+    try {
+      setTranslateLoading(true);
+      const response = await translateProductName(productCnName);
+      if (response && response.product_en_name) {
+        form.setFieldsValue({ product_en_name: response.product_en_name });
+        message.success(t('messages.translationSuccess'));
+      } else {
+        message.error(t('messages.translationFailed'));
+      }
+    } catch (error) {
+      console.error('Error translating product name:', error);
+      message.error(`${t('messages.translationError')}${error.message || '请稍后再试'}`);
+    } finally {
+      setTranslateLoading(false);
+    }
+  };
+
   const renderField = (field) => {
     const placeholderText = field?.example || field?.description || '';
 
@@ -325,6 +355,7 @@ const SkuFormModal = ({
     f => AI_INPUT_FIELDS.includes(f.name) ||
          ['title', 'short_desc', 'long_desc', 'key_features_1', 'key_features_2', 'key_features_3', 'key_features_4', 'key_features_5'].includes(f.name)
   );
+  const canTranslate = fieldsConfig && fieldsConfig.some(f => f.name === 'product_cn_name') && fieldsConfig.some(f => f.name === 'product_en_name');
 
   // 新增清除临时保存数据的函数
   const clearTempData = () => {
@@ -370,6 +401,18 @@ const SkuFormModal = ({
                     loading={aiLoading}
                   >
                     {t('aiDescription.useAI')}
+                  </Button>
+                </Col>
+              )}
+              {/* 新增翻译产品名按钮 */}
+              {canTranslate && (
+                <Col style={{ marginLeft: '16px' }}>
+                  <Button
+                    key="translateProductName"
+                    onClick={handleTranslateProductName}
+                    loading={translateLoading}
+                  >
+                    {t('中文产品名字翻译为英文')}
                   </Button>
                 </Col>
               )}
