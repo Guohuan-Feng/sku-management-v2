@@ -1,8 +1,10 @@
 // src/components/AuthForm.jsx
 import React, { useState } from 'react';
-import { Form, Input, Button, message, Alert, Tabs } from 'antd';
+import { Form, Input, Button, message, Alert, Tabs, Select } from 'antd'; // 导入 Select
 import { useTranslation } from 'react-i18next';
 import { loginUser, registerUser } from '../services/skuApiService';
+
+const { Option } = Select; // 解构 Option
 
 const AuthForm = ({ onAuthSuccess }) => {
   const { t } = useTranslation();
@@ -15,23 +17,23 @@ const AuthForm = ({ onAuthSuccess }) => {
     setError('');
     try {
       if (activeTab === 'register') {
-        const data = await registerUser(values.username, values.password);
+        // --- 修改点：在调用 registerUser 时传入 role ---
+        const data = await registerUser(values.username, values.password, values.role);
+        // --- 结束修改点 ---
         if (data && data.message) {
           message.success(t('registerSuccess'));
-          setActiveTab('login'); // 注册成功后切换到登录页
+          setActiveTab('login');
         } else {
           message.error(t('registerFailed'));
         }
       } else { // Login
-        // 假设 loginUser 返回 { message: "Authenticate pass.", data: { refresh_token, access_token, token_type, expires_in } }
-        const response = await loginUser(values.username, values.password); // loginUser现在返回完整的response
+        const response = await loginUser(values.username, values.password);
         if (response && response.data && response.data.access_token) {
           const { access_token, refresh_token, expires_in } = response.data;
           
           localStorage.setItem('access_token', access_token);
-          localStorage.setItem('refresh_token', refresh_token); // 存储 refresh_token
+          localStorage.setItem('refresh_token', refresh_token);
           
-          // 如果后端提供了 access_token 的 expires_in (秒)，存储其过期时间戳（毫秒）
           if (expires_in) {
             const expiryTime = Date.now() + expires_in * 1000; 
             localStorage.setItem('token_expiry_time', expiryTime.toString());
@@ -127,6 +129,20 @@ const AuthForm = ({ onAuthSuccess }) => {
           >
             <Input.Password placeholder={t('confirmPassword')} />
           </Form.Item>
+
+          {/* --- 新增：角色选择 --- */}
+          <Form.Item
+            name="role"
+            label={t('role')} // 您需要在 i18n/zh.json 和 i18n/en.json 中添加 'role' 翻译
+            rules={[{ required: true, message: t('pleaseSelectRole') }]} // 您需要在 i18n/zh.json 和 i18n/en.json 中添加 'pleaseSelectRole' 翻译
+            initialValue="vendor" // 设置默认值
+          >
+            <Select placeholder={t('selectRole')}> {/* 您需要在 i18n/zh.json 和 i18n/en.json 中添加 'selectRole' 翻译 */}
+              <Option value="vendor">{t('vendor')}</Option> {/* 您需要在 i18n/zh.json 和 i18n/en.json 中添加 'vendor' 翻译 */}
+              <Option value="admin">{t('admin')}</Option>   {/* 您需要在 i18n/zh.json 和 i18n/en.json 中添加 'admin' 翻译 */}
+            </Select>
+          </Form.Item>
+          {/* --- 结束新增 --- */}
 
           <Form.Item>
             <Button type="primary" htmlType="submit" loading={loading} block>

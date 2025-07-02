@@ -1,14 +1,17 @@
 // src/App.jsx
 import { useState, useEffect, useRef } from 'react';
 import './App.css';
-import { Table, ConfigProvider, Button, message, Upload, Space, Popconfirm, Alert, Form, Input, Divider } from 'antd'; // 导入 Divider
+import { Table, ConfigProvider, Button, message, Upload, Space, Popconfirm, Alert, Form, Input, Divider, Modal } from 'antd'; // 导入 Divider 和 Modal
 import * as XLSX from 'xlsx';
 import { fieldsConfig, statusOptions, conditionOptions } from './components/fieldConfig';
 import { UploadOutlined, EditOutlined, DeleteOutlined, PlusOutlined, ExportOutlined, SaveOutlined, CloseOutlined, EyeOutlined, SearchOutlined } from '@ant-design/icons';
 import SkuFormModal from './components/SkuFormModal';
 import EditableCell from './components/EditableCell';
 import AuthForm from './components/AuthForm'; // 添加这一行
-import { getAllSkus, createSku, updateSku, deleteSku, uploadSkuCsv } from './services/skuApiService';
+import { getAllSkus, createSku, updateSku, deleteSku, uploadSkuCsv, getCurrentUserInfo } from './services/skuApiService';
+import { Routes, Route, Navigate, useLocation, Link, useNavigate } from 'react-router-dom';
+import AdminPage from './pages/AdminPage';
+import AccountPage from './pages/AccountPage';
 
 // Import Ant Design language packs
 import enUS from 'antd/locale/en_US';
@@ -41,6 +44,12 @@ const App = () => {
   // New login status
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
+  // New user role
+  const [userRole, setUserRole] = useState(null);
+
+  // New user info
+  const [userInfo, setUserInfo] = useState(null);
+
   // Ant Design language pack mapping
   const antdLocales = {
     en: enUS,
@@ -53,6 +62,13 @@ const App = () => {
     if (token) {
       setIsLoggedIn(true);
       fetchSkusWithHandling();
+      getCurrentUserInfo().then(user => {
+        setUserRole(user.role);
+        setUserInfo(user);
+      }).catch(() => {
+        setUserRole(null);
+        setUserInfo(null);
+      });
     }
   }, []);
 
@@ -805,150 +821,180 @@ const App = () => {
     i18n.changeLanguage(newLang);
   };
 
+  // 路由守卫组件
+  function RequireAdmin({ children }) {
+    const location = useLocation();
+    if (!isLoggedIn) {
+      return <Navigate to="/" replace state={{ from: location }} />;
+    }
+    if (userRole !== 'admin') {
+      return <Navigate to="/" replace state={{ from: location, noPermission: true }} />;
+    }
+    return children;
+  }
+
   if (!isLoggedIn) {
     return <AuthForm onAuthSuccess={handleAuthSuccess} />;
   }
 
   return (
-    <ConfigProvider locale={antdLocales[i18n.language]}>
-      {/* Add classname to dynamically adjust table header alignment based on language */}
-      <div className={`App ${i18n.language === 'zh' ? 'lang-zh' : ''}`}>
-        <div className="header-container">
-            <div className="logo-title-container">
-                <img src={JFJPLogo} alt="JFJP Logo" className="header-logo" />
-                <h1 className={`header-title ${i18n.language === 'zh' ? 'zh' : ''}`}>{t('systemTitle')}</h1>
-            </div>
-            <div className="header-right">
-                {/* New official website link */}
-                <a
-                    href="https://xuanzi2023.wixsite.com/jfjp"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ marginRight: '15px', color: '#666', textDecoration: 'none' }}
-                >
-                    {t('officialWebsite')}
-                </a>
-                {/* 添加分割线 */}
-                <Divider type="vertical" style={{ height: '20px', borderColor: '#ccc' }} /> 
-                {/* Language toggle button */}
-                <Space className="language-selector">
-                    <Button
-                        onClick={toggleLanguage}
-                        size="small"
-                    >
-                        {i18n.language === 'en' ? '中文' : 'EN'}
-                    </Button>
-                </Space>
-                <Button onClick={handleLogout} type="default">{t('logout')}</Button>
-            </div>
-        </div>
-
-        {errorMessages.length > 0 && (
-          <Alert
-            message={t('operationInfoErrors')}
-            description={
-              <ul style={{ maxHeight: '150px', overflowY: 'auto' }}>
-                {errorMessages.map((msg, index) => (
-                  <li key={index}>{msg}</li>
-                ))}
-              </ul>
-            }
-            type="error"
-            closable
-            onClose={() => setErrorMessages([])}
-            style={{ marginBottom: 16 }}
-          />
-        )}
-        <div className="table-actions-container">
-            <Space className="table-top-buttons">
-                <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingSku(null); setIsModalOpen(true); }}>
-                    {t('createSkuModal')}
-                </Button>
-                <Upload
-                    ref={fileInputRef}
-                    customRequest={handleExcelUpload} // 从 handleCsvUpload 更改为 handleExcelUpload
-                    showUploadList={false}
-                    accept=".csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" // 修改 accept 属性以包含 .xls 和 .xlsx
-                    name="file">
-                    <Button icon={<UploadOutlined />}>{t('uploadCsv')}</Button> {/* 这里的文本会在i18n中修改 */}
-                </Upload>
-                {/* 新添加的“Vendor Portal Template”按钮 */}
-                <Button icon={<ExportOutlined />} onClick={handleDownloadTemplate}>
-                    {t('vendorPortalTemplate')}
-                </Button>
-                <Button icon={<ExportOutlined />} onClick={handleExport}>
-                    {t('exportAll')}
-                </Button>
-                {/* Place search bar here */}
-                <div className="search-bar-container">
-                    <Input
-                        prefix={<SearchOutlined />}
-                        placeholder={t('searchPlaceholder')}
-                        value={searchText}
-                        onChange={e => setSearchText(e.target.value)}
-                        style={{ width: 300 }}
-                    />
-                </div>
-            </Space>
-        </div>
-
-        <Form form={form} component={false} onValuesChange={handleInlineFormValuesChange}>
-          <Table
-            rowSelection={rowSelection}
-            components={{
-              body: {
-                cell: EditableCell,
-              },
-            }}
-            columns={getTableColumns()}
-            dataSource={filteredDataSource}
-            loading={loading}
-            scroll={{ x: 'max-content', y: '60vh' }}
-            bordered
-            rowKey="key"
-            pagination={{
-                onChange: cancel,
-                pageSizeOptions: ['15', '20', '50', '100', '200'],
-                showSizeChanger: true,
-                defaultPageSize: 15,
-                showTotal: (total, range) => `${range[0]}-${range[1]} / ${total} ${t('common.records')}`,
-              }}
-            footer={() => (
-              <div style={{ textAlign: 'center' }}>
-                <Button type="default" icon={<PlusOutlined />} onClick={handleAddInline}>
-                  {t('tableFooterAddInline')}
-                </Button>
+    <ConfigProvider locale={antdLocales[i18n.language] || zhCN}>
+      <Routes>
+        <Route path="/" element={
+          isLoggedIn ? (
+            <div className={`App ${i18n.language === 'zh' ? 'lang-zh' : ''}`}>
+              <div className="header-container">
+                  <div className="logo-title-container">
+                      <img src={JFJPLogo} alt="JFJP Logo" className="header-logo" />
+                      <h1 className={`header-title ${i18n.language === 'zh' ? 'zh' : ''}`}>{t('systemTitle')}</h1>
+                  </div>
+                  <div className="header-right">
+                      {/* New official website link */}
+                      <a
+                          href="https://xuanzi2023.wixsite.com/jfjp"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ marginRight: '15px', color: '#666', textDecoration: 'none' }}
+                      >
+                          {t('officialWebsite')}
+                      </a>
+                      {/* 添加分割线 */}
+                      <Divider type="vertical" style={{ height: '20px', borderColor: '#ccc' }} /> 
+                      {/* Language toggle button */}
+                      <Space className="language-selector">
+                          <Button
+                              onClick={toggleLanguage}
+                              size="small"
+                          >
+                              {i18n.language === 'en' ? '中文' : 'EN'}
+                          </Button>
+                      </Space>
+                      {userRole === 'admin' && (
+                        <Button as={Link} to="/admin" style={{ marginRight: 8 }}>{t('adminPanel') || '管理员界面'}</Button>
+                      )}
+                      <Button as={Link} to="/account" style={{ marginRight: 8 }}>{t('myAccount') || '我的账号'}</Button>
+                      <Button onClick={handleLogout} type="default">{t('logout')}</Button>
+                  </div>
               </div>
-            )}
-          />
-        </Form>
-        <SkuFormModal
-          visible={isModalOpen}
-          onClose={handleModalClose}
-          onSubmit={(values) => handleModalSubmit(values, editingSku)}
-          initialData={editingSku}
-          fieldsConfig={fieldsConfig}
-          statusOptions={statusOptions}
-          conditionOptions={conditionOptions}
-          apiFieldErrors={formApiFieldErrors}
-          showAllMode={true}
-        />
-        <SkuFormModal
-          visible={isViewAllModalOpen}
-          onClose={handleViewAllModalClose}
-          onSubmit={(values) => handleModalSubmit(values, viewingSku)}
-          initialData={viewingSku}
-          fieldsConfig={fieldsConfig}
-          statusOptions={statusOptions}
-          conditionOptions={conditionOptions}
-          apiFieldErrors={formApiFieldErrors}
-          showAllMode={true}
-        />
-        {/* Existing copyright information */}
-        <footer style={{ textAlign: 'center', marginTop: '20px', color: '#888' }}>
-          © {new Date().getFullYear()} by JFJP.
-        </footer>
-      </div>
+
+              {errorMessages.length > 0 && (
+                <Alert
+                  message={t('operationInfoErrors')}
+                  description={
+                    <ul style={{ maxHeight: '150px', overflowY: 'auto' }}>
+                      {errorMessages.map((msg, index) => (
+                        <li key={index}>{msg}</li>
+                      ))}
+                    </ul>
+                  }
+                  type="error"
+                  closable
+                  onClose={() => setErrorMessages([])}
+                  style={{ marginBottom: 16 }}
+                />
+              )}
+              <div className="table-actions-container">
+                  <Space className="table-top-buttons">
+                      <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingSku(null); setIsModalOpen(true); }}>
+                          {t('createSkuModal')}
+                      </Button>
+                      <Upload
+                          ref={fileInputRef}
+                          customRequest={handleExcelUpload} // 从 handleCsvUpload 更改为 handleExcelUpload
+                          showUploadList={false}
+                          accept=".csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" // 修改 accept 属性以包含 .xls 和 .xlsx
+                          name="file">
+                          <Button icon={<UploadOutlined />}>{t('uploadCsv')}</Button> {/* 这里的文本会在i18n中修改 */}
+                      </Upload>
+                      {/* 新添加的"Vendor Portal Template"按钮 */}
+                      <Button icon={<ExportOutlined />} onClick={handleDownloadTemplate}>
+                          {t('vendorPortalTemplate')}
+                      </Button>
+                      <Button icon={<ExportOutlined />} onClick={handleExport}>
+                          {t('exportAll')}
+                      </Button>
+                      {/* Place search bar here */}
+                      <div className="search-bar-container">
+                          <Input
+                              prefix={<SearchOutlined />}
+                              placeholder={t('searchPlaceholder')}
+                              value={searchText}
+                              onChange={e => setSearchText(e.target.value)}
+                              style={{ width: 300 }}
+                          />
+                      </div>
+                  </Space>
+              </div>
+
+              <Form form={form} component={false} onValuesChange={handleInlineFormValuesChange}>
+                <Table
+                  rowSelection={rowSelection}
+                  components={{
+                    body: {
+                      cell: EditableCell,
+                    },
+                  }}
+                  columns={getTableColumns()}
+                  dataSource={filteredDataSource}
+                  loading={loading}
+                  scroll={{ x: 'max-content', y: '60vh' }}
+                  bordered
+                  rowKey="key"
+                  pagination={{
+                      onChange: cancel,
+                      pageSizeOptions: ['15', '20', '50', '100', '200'],
+                      showSizeChanger: true,
+                      defaultPageSize: 15,
+                      showTotal: (total, range) => `${range[0]}-${range[1]} / ${total} ${t('common.records')}`,
+                    }}
+                  footer={() => (
+                    <div style={{ textAlign: 'center' }}>
+                      <Button type="default" icon={<PlusOutlined />} onClick={handleAddInline}>
+                        {t('tableFooterAddInline')}
+                      </Button>
+                    </div>
+                  )}
+                />
+              </Form>
+              <SkuFormModal
+                visible={isModalOpen}
+                onClose={handleModalClose}
+                onSubmit={(values) => handleModalSubmit(values, editingSku)}
+                initialData={editingSku}
+                fieldsConfig={fieldsConfig}
+                statusOptions={statusOptions}
+                conditionOptions={conditionOptions}
+                apiFieldErrors={formApiFieldErrors}
+                showAllMode={true}
+              />
+              <SkuFormModal
+                visible={isViewAllModalOpen}
+                onClose={handleViewAllModalClose}
+                onSubmit={(values) => handleModalSubmit(values, viewingSku)}
+                initialData={viewingSku}
+                fieldsConfig={fieldsConfig}
+                statusOptions={statusOptions}
+                conditionOptions={conditionOptions}
+                apiFieldErrors={formApiFieldErrors}
+                showAllMode={true}
+              />
+              {/* Existing copyright information */}
+              <footer style={{ textAlign: 'center', marginTop: '20px', color: '#888' }}>
+                © {new Date().getFullYear()} by JFJP.
+              </footer>
+            </div>
+          ) : (
+            <AuthForm onAuthSuccess={handleAuthSuccess} />
+          )
+        } />
+        <Route path="/admin" element={
+          <RequireAdmin>
+            <AdminPage />
+          </RequireAdmin>
+        } />
+        <Route path="/account" element={<AccountPage userInfo={userInfo} t={t} />} />
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
     </ConfigProvider>
   );
 };
