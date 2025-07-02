@@ -26,8 +26,8 @@ const AdminPage = () => {
     setLoading(true);
     try {
       const data = await getAllUsers();
-      if (data && Array.isArray(data)) {
-        setUsers(data);
+      if (data && Array.isArray(data.data)) {
+        setUsers(data.data);
       } else {
         message.error(t('failedToLoadUsers'));
       }
@@ -44,10 +44,10 @@ const AdminPage = () => {
   }, []);
 
   // 处理删除用户
-  const handleDeleteUser = async (email) => {
+  const handleDeleteUser = async (id) => {
     try {
-      await deleteUser(email);
-      message.success(t('userDeletedSuccessfully', { email }));
+      await deleteUser(id);
+      message.success(t('userDeletedSuccessfully', { id }));
       fetchUsers(); // 删除后刷新列表
     } catch (error) {
       console.error('Failed to delete user:', error);
@@ -75,11 +75,11 @@ const AdminPage = () => {
     setLoading(true);
     try {
       if (modalType === 'password') {
-        await changeUserPassword(currentUser.email, values.newPassword);
-        message.success(t('passwordChangedSuccessfully', { email: currentUser.email }));
+        await changeUserPassword(currentUser.id, values.newPassword);
+        message.success(t('passwordChangedSuccessfully', { id: currentUser.id }));
       } else if (modalType === 'role') {
-        await changeUserRole(currentUser.email, values.role);
-        message.success(t('roleChangedSuccessfully', { email: currentUser.email }));
+        await changeUserRole(currentUser.id, values.role);
+        message.success(t('roleChangedSuccessfully', { id: currentUser.id }));
       }
       setIsModalVisible(false);
       fetchUsers(); // 刷新列表以显示更新
@@ -114,7 +114,7 @@ const AdminPage = () => {
         <Space size="middle">
           <Popconfirm
             title={t('confirmDeleteUser')} // 您需要在 i18n/zh.json 和 i18n/en.json 中添加 'confirmDeleteUser' 翻译
-            onConfirm={() => handleDeleteUser(record.email)}
+            onConfirm={() => handleDeleteUser(record.id)}
             okText={t('yes')} // 您需要在 i18n/zh.json 和 i18n/en.json 中添加 'yes' 翻译
             cancelText={t('no')} // 您需要在 i18n/zh.json 和 i18n/en.json 中添加 'no' 翻译
           >
@@ -133,7 +133,7 @@ const AdminPage = () => {
       <Table
         columns={columns}
         dataSource={users}
-        rowKey="email"
+        rowKey="id"
         loading={loading}
         pagination={{ pageSize: 10 }}
       />
@@ -150,8 +150,8 @@ const AdminPage = () => {
           onFinish={handleModalSubmit}
           initialValues={modalType === 'role' && currentUser ? { role: currentUser.role } : {}}
         >
-          <Form.Item label={t('userEmail')}>
-            <Input value={currentUser?.email} disabled />
+          <Form.Item label={t('userId') || '用户ID'}>
+            <Input value={currentUser?.id} disabled />
           </Form.Item>
 
           {modalType === 'password' && (

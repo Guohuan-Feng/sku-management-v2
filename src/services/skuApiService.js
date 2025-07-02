@@ -306,9 +306,10 @@ export const getAllUsers = async () => {
  * 删除指定用户
  * DELETE /JFJP/user/delete/{email}
  */
-export const deleteUser = async (email) => {
-  return request(`${USER_API_BASE_URL}/delete/${email}`, {
+export const deleteUser = async (id) => {
+  return request(`${USER_API_BASE_URL}/delete`, { // <--- 关键修改：URL 中移除了 ${id} --->
     method: 'DELETE',
+    body: JSON.stringify({ id: id }), // 继续在请求体中发送 id
   });
 };
 
@@ -316,20 +317,25 @@ export const deleteUser = async (email) => {
  * 更改指定用户的密码
  * POST /JFJP/user/change-password
  */
-export const changeUserPassword = async (email, newPassword) => {
+// <--- 这里是 changeUserPassword 函数的修改 --->
+export const changeUserPassword = async (id, newPassword) => {
   return request(`${USER_API_BASE_URL}/change-password`, {
     method: 'POST',
-    body: JSON.stringify({ email, new_password: newPassword }),
+    body: JSON.stringify({ id: id, new_password: newPassword }), // <--- 关键修改：字段名改为 id --->
   });
 };
-
+// <--- 修改结束 --->
+// <--- 修改结束 --->
 /**
  * 更改指定用户的角色
  * POST /JFJP/user/change-role
  */
-export const changeUserRole = async (email, role) => {
+// <--- 这里是 changeUserRole 函数的修改 --->
+// 请注意，后端仍使用 ChangePasswordRequest，这里我们只能适应前端发送的字段名
+export const changeUserRole = async (id, role) => {
   return request(`${USER_API_BASE_URL}/change-role`, {
     method: 'POST',
-    body: JSON.stringify({ email, role }),
+    body: JSON.stringify({ id: id, role: role }), // <--- 关键修改：字段名改为 id --->
   });
 };
+// <--- 修改结束 --->

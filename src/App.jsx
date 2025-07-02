@@ -870,9 +870,13 @@ const App = () => {
                           </Button>
                       </Space>
                       {userRole === 'admin' && (
-                        <Button as={Link} to="/admin" style={{ marginRight: 8 }}>{t('adminPanel') || '管理员界面'}</Button>
+                        <Link to="/admin" style={{ marginRight: 8 }}>
+                          <Button>{t('adminPanel') || '管理员界面'}</Button>
+                        </Link>
                       )}
-                      <Button as={Link} to="/account" style={{ marginRight: 8 }}>{t('myAccount') || '我的账号'}</Button>
+                      <Link to="/account" style={{ marginRight: 8 }}>
+                        <Button>{t('myAccount') || '我的账号'}</Button>
+                      </Link>
                       <Button onClick={handleLogout} type="default">{t('logout')}</Button>
                   </div>
               </div>

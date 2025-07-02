@@ -1,10 +1,10 @@
 // src/components/AuthForm.jsx
 import React, { useState } from 'react';
-import { Form, Input, Button, message, Alert, Tabs, Select } from 'antd'; // 导入 Select
+import { Form, Input, Button, message, Alert, Tabs, Select } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { loginUser, registerUser } from '../services/skuApiService';
 
-const { Option } = Select; // 解构 Option
+const { Option } = Select;
 
 const AuthForm = ({ onAuthSuccess }) => {
   const { t } = useTranslation();
@@ -18,7 +18,10 @@ const AuthForm = ({ onAuthSuccess }) => {
     try {
       if (activeTab === 'register') {
         // --- 修改点：在调用 registerUser 时传入 role ---
-        const data = await registerUser(values.username, values.password, values.role);
+        // 添加这一行来打印 role 的值
+        console.log("Attempting to register with role:", values.role); //
+
+        const data = await registerUser(values.username, values.password, values.role); //
         // --- 结束修改点 ---
         if (data && data.message) {
           message.success(t('registerSuccess'));
@@ -27,7 +30,7 @@ const AuthForm = ({ onAuthSuccess }) => {
           message.error(t('registerFailed'));
         }
       } else { // Login
-        const response = await loginUser(values.username, values.password);
+        const response = await loginUser(values.username, values.password); //
         if (response && response.data && response.data.access_token) {
           const { access_token, refresh_token, expires_in } = response.data;
           
