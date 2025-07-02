@@ -98,17 +98,17 @@ const AdminPage = () => {
 
   const columns = [
     {
-      title: t('email'), // 您需要在 i18n/zh.json 和 i18n/en.json 中添加 'email' 翻译
+      title: t('Email'), // 您需要在 i18n/zh.json 和 i18n/en.json 中添加 'email' 翻译
       dataIndex: 'email',
       key: 'email',
     },
     {
-      title: t('role'), // 已有
+      title: t('Role'), // 已有
       dataIndex: 'role',
       key: 'role',
     },
     {
-      title: t('actions'), // 您需要在 i18n/zh.json 和 i18n/en.json 中添加 'actions' 翻译
+      title: t('Actions'), // 您需要在 i18n/zh.json 和 i18n/en.json 中添加 'actions' 翻译
       key: 'actions',
       render: (_, record) => (
         <Space size="middle">
@@ -118,10 +118,10 @@ const AdminPage = () => {
             okText={t('yes')} // 您需要在 i18n/zh.json 和 i18n/en.json 中添加 'yes' 翻译
             cancelText={t('no')} // 您需要在 i18n/zh.json 和 i18n/en.json 中添加 'no' 翻译
           >
-            <Button danger>{t('deleteUser')}</Button> {/* 您需要在 i18n/zh.json 和 i18n/en.json 中添加 'deleteUser' 翻译 */}
+            <Button danger>{t('Delete User')}</Button> {/* 您需要在 i18n/zh.json 和 i18n/en.json 中添加 'deleteUser' 翻译 */}
           </Popconfirm>
-          <Button onClick={() => showModal('password', record)}>{t('changePassword')}</Button> {/* 您需要在 i18n/zh.json 和 i18n/en.json 中添加 'changePassword' 翻译 */}
-          <Button onClick={() => showModal('role', record)}>{t('changeRole')}</Button> {/* 您需要在 i18n/zh.json 和 i18n/en.json 中添加 'changeRole' 翻译 */}
+          <Button onClick={() => showModal('password', record)}>{t('Change Password')}</Button> {/* 您需要在 i18n/zh.json 和 i18n/en.json 中添加 'changePassword' 翻译 */}
+          <Button onClick={() => showModal('role', record)}>{t('Change Role')}</Button> {/* 您需要在 i18n/zh.json 和 i18n/en.json 中添加 'changeRole' 翻译 */}
         </Space>
       ),
     },
@@ -129,7 +129,7 @@ const AdminPage = () => {
 
   return (
     <div style={{ padding: 24 }}>
-      <h1>{t('adminPanel')}</h1> {/* 您需要在 i18n/zh.json 和 i18n/en.json 中添加 'adminPanel' 翻译 */}
+      <h1 style={{ color: 'black' }}>{t('Admin Panel')}</h1> {/* 您需要在 i18n/zh.json 和 i18n/en.json 中添加 'adminPanel' 翻译 */}
       <Table
         columns={columns}
         dataSource={users}
