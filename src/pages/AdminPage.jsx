@@ -7,7 +7,8 @@ import {
   deleteUser,
   changeUserPassword,
   changeUserRole,
-  getCurrentUserInfo // 用于获取当前用户角色，尽管这里只是组件示例，实际权限控制可能在路由层
+  getCurrentUserInfo,
+  registerUser
 } from '../services/skuApiService'; // 确保这些函数已在 skuApiService.js 中导出
 
 const { Option } = Select;
@@ -20,6 +21,9 @@ const AdminPage = () => {
   const [modalType, setModalType] = useState(''); // 'password' 或 'role'
   const [currentUser, setCurrentUser] = useState(null); // 当前操作的用户
   const [form] = Form.useForm();
+  const [registerModalVisible, setRegisterModalVisible] = useState(false);
+  const [registerLoading, setRegisterLoading] = useState(false);
+  const [registerForm] = Form.useForm();
 
   // 获取用户列表
   const fetchUsers = async () => {
@@ -96,6 +100,22 @@ const AdminPage = () => {
     form.resetFields();
   };
 
+  // 注册新用户
+  const handleRegister = async (values) => {
+    setRegisterLoading(true);
+    try {
+      await registerUser(values.username, values.password, values.role);
+      message.success('注册成功');
+      setRegisterModalVisible(false);
+      registerForm.resetFields();
+      fetchUsers();
+    } catch (error) {
+      message.error(error.message || '注册失败');
+    } finally {
+      setRegisterLoading(false);
+    }
+  };
+
   const columns = [
     {
       title: t('Email'), // 您需要在 i18n/zh.json 和 i18n/en.json 中添加 'email' 翻译
@@ -129,7 +149,10 @@ const AdminPage = () => {
 
   return (
     <div style={{ padding: 24 }}>
-      <h1 style={{ color: 'black' }}>{t('Admin Panel')}</h1> {/* 您需要在 i18n/zh.json 和 i18n/en.json 中添加 'adminPanel' 翻译 */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <h1 style={{ color: 'black', margin: 0 }}>{t('Admin Panel')}</h1>
+        <Button type="primary" onClick={() => setRegisterModalVisible(true)}>{t('Register') || '新增用户'}</Button>
+      </div>
       <Table
         columns={columns}
         dataSource={users}
@@ -203,6 +226,70 @@ const AdminPage = () => {
             </Button>
             <Button onClick={handleCancel} style={{ marginLeft: 8 }}>
               {t('cancel')}
+            </Button>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* 新增用户弹窗 */}
+      <Modal
+        title={t('register') || '新增用户'}
+        visible={registerModalVisible}
+        onCancel={() => setRegisterModalVisible(false)}
+        footer={null}
+      >
+        <Form
+          form={registerForm}
+          layout="vertical"
+          onFinish={handleRegister}
+        >
+          <Form.Item
+            name="username"
+            label={t('username') || '用户名'}
+            rules={[{ required: true, message: t('pleaseInputUsername') || '请输入用户名' }]}
+          >
+            <Input />
+          </Form.Item>
+          <Form.Item
+            name="password"
+            label={t('password') || '密码'}
+            rules={[{ required: true, message: t('pleaseInputPassword') || '请输入密码' }]}
+          >
+            <Input.Password />
+          </Form.Item>
+          <Form.Item
+            name="confirm"
+            label={t('confirmPassword') || '确认密码'}
+            dependencies={['password']}
+            hasFeedback
+            rules={[
+              { required: true, message: t('pleaseConfirmPassword') || '请确认密码' },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue('password') === value) {
+                    return Promise.resolve();
+                  }
+                  return Promise.reject(new Error(t('passwordsDoNotMatch') || '两次输入的密码不一致'));
+                },
+              }),
+            ]}
+          >
+            <Input.Password />
+          </Form.Item>
+          <Form.Item
+            name="role"
+            label={t('role') || '角色'}
+            rules={[{ required: true, message: t('pleaseSelectRole') || '请选择角色' }]}
+            initialValue="vendor"
+          >
+            <Select>
+              <Select.Option value="vendor">{t('vendor') || '供应商'}</Select.Option>
+              <Select.Option value="admin">{t('admin') || '管理员'}</Select.Option>
+            </Select>
+          </Form.Item>
+          <Form.Item>
+            <Button type="primary" htmlType="submit" loading={registerLoading} block>
+              {t('register') || '注册'}
             </Button>
           </Form.Item>
         </Form>
