@@ -871,13 +871,13 @@ const App = () => {
                       </Space>
                       {userRole === 'admin' && (
                         <Link to="/admin" style={{ marginRight: 8 }}>
-                          <Button>{t('adminPanel') || '管理员界面'}</Button>
+                          <Button>{t('Admin Panel') || '管理员界面'}</Button>
                         </Link>
                       )}
                       <Link to="/account" style={{ marginRight: 8 }}>
-                        <Button>{t('myAccount') || '我的账号'}</Button>
+                        <Button>{t('My Account') || '我的账号'}</Button>
                       </Link>
-                      <Button onClick={handleLogout} type="default">{t('logout')}</Button>
+                      <Button onClick={handleLogout} type="default">{t('Sign Out')}</Button>
                   </div>
               </div>
 
@@ -954,7 +954,7 @@ const App = () => {
                   footer={() => (
                     <div style={{ textAlign: 'center' }}>
                       <Button type="default" icon={<PlusOutlined />} onClick={handleAddInline}>
-                        {t('tableFooterAddInline')}
+                        {t('Table Footer Add Inline')}
                       </Button>
                     </div>
                   )}
