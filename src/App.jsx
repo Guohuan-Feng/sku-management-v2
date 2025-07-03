@@ -56,12 +56,28 @@ const App = () => {
     zh: zhCN,
   };
 
+    // 将获取用户信息和角色的逻辑封装成一个函数
+    const fetchUserInfoAndRole = async () => {
+      try {
+        const user = await getCurrentUserInfo(); //
+        setUserRole(user.role);
+        setUserInfo(user);
+        console.log("User info fetched:", user); // 添加日志，方便调试
+      } catch (error) {
+        console.error('Failed to fetch user info:', error);
+        setUserRole(null);
+        setUserInfo(null);
+        // 可以添加错误消息提示，例如：message.error(t('failedToLoadUserInfo'));
+      }
+    };
+
   // Check token in local storage to determine if the user is logged in
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     if (token) {
       setIsLoggedIn(true);
       fetchSkusWithHandling();
+      fetchUserInfoAndRole(); // 在初始加载时调用
       getCurrentUserInfo().then(user => {
         setUserRole(user.role);
         setUserInfo(user);
@@ -93,15 +109,20 @@ const App = () => {
     }
   };
 
-  const handleAuthSuccess = () => {
+  const handleAuthSuccess = async () => { // 修改为 async 函数
     setIsLoggedIn(true);
     fetchSkusWithHandling();
+    await fetchUserInfoAndRole(); // 在登录成功后等待获取用户信息和角色
     message.success(t('messages.loggedIn'));
   };
 
   const handleLogout = () => {
     localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token'); // 确保也清除了 refresh token
+    localStorage.removeItem('token_expiry_time'); // 确保也清除了 token expiry time
     setIsLoggedIn(false);
+    setUserRole(null); // 登出时清除用户角色
+    setUserInfo(null); // 登出时清除用户信息
     setDataSource([]);
     message.info(t('messages.loggedOut'));
   };
