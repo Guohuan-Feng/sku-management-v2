@@ -210,7 +210,7 @@
       "mustBePositive": "必须大于 0。",
       "positiveInteger": "必须是正整数。",
       "minOne": "必须 >= 1。",
-      "fourDigitYear": "请输入 4 位年份（例如：“2023”）。",
+      "fourDigitYear": "请输入 4 位年份（例如：\"2023\"）。",
       "invalidHarmonized": "无效的协调代码格式（允许数字、字母、句点、连字符）。",
       "urlInvalid": "需要一个有效的 URL，以 http(s):// 开头。",
       "percentageRange": "请输入 1 到 100 之间的值（例如：50 或 50.5）。",
@@ -243,6 +243,10 @@
     },
     "common": {
       "records": "条"
-    }
+    },
+    "syncToWMS": "同步到WMS",
+    "noSkuSelected": "请先选择要同步的SKU！",
+    "syncToWMSSuccess": "已成功同步到WMS！",
+    "syncToWMSError": "同步到WMS失败，请重试。"
   }
 }

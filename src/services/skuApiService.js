@@ -339,3 +339,10 @@ export const changeUserRole = async (id, role) => {
   });
 };
 // <--- 修改结束 --->
+
+export const sendSelectedSkuIdsToBackend = async (ids) => {
+  return request(`${API_BASE_URL}/wms-create-update`, {
+    method: 'POST',
+    body: JSON.stringify({ sku_ids: ids }),
+  });
+};

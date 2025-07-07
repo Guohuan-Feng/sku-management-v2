@@ -8,7 +8,7 @@ import { UploadOutlined, EditOutlined, DeleteOutlined, PlusOutlined, ExportOutli
 import SkuFormModal from './components/SkuFormModal';
 import EditableCell from './components/EditableCell';
 import AuthForm from './components/AuthForm'; // 添加这一行
-import { getAllSkus, createSku, updateSku, deleteSku, uploadSkuCsv, getCurrentUserInfo } from './services/skuApiService';
+import { getAllSkus, createSku, updateSku, deleteSku, uploadSkuCsv, getCurrentUserInfo, sendSelectedSkuIdsToBackend } from './services/skuApiService';
 import { Routes, Route, Navigate, useLocation, Link, useNavigate } from 'react-router-dom';
 import AdminPage from './pages/AdminPage';
 import AccountPage from './pages/AccountPage';
@@ -854,6 +854,19 @@ const App = () => {
     return children;
   }
 
+  const handleSyncToWMS = async () => {
+    if (selectedRowKeys.length === 0) {
+      message.warning(t('noSkuSelected'));
+      return;
+    }
+    try {
+      await sendSelectedSkuIdsToBackend(selectedRowKeys);
+      message.success(t('syncToWMSSuccess'));
+    } catch (error) {
+      message.error(t('syncToWMSError'));
+    }
+  };
+
   if (!isLoggedIn) {
     return <AuthForm onAuthSuccess={handleAuthSuccess} />;
   }
@@ -938,6 +951,7 @@ const App = () => {
                       <Button icon={<ExportOutlined />} onClick={handleExport}>
                           {t('exportAll')}
                       </Button>
+                      <Button onClick={handleSyncToWMS} icon={<ExportOutlined />}>{t('syncToWMS')}</Button>
                       {/* Place search bar here */}
                       <div className="search-bar-container">
                           <Input

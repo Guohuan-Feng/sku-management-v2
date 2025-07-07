@@ -242,6 +242,10 @@
     },
     "common": {
       "records": "records"
-    }
+    },
+    "syncToWMS": "Sync to WMS",
+    "noSkuSelected": "Please select SKUs to sync!",
+    "syncToWMSSuccess": "Successfully synced to WMS!",
+    "syncToWMSError": "Failed to sync to WMS, please try again."
   }
 }
