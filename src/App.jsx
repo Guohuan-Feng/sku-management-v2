@@ -860,8 +860,22 @@ const App = () => {
       return;
     }
     try {
-      await sendSelectedSkuIdsToBackend(selectedRowKeys);
+      const response = await sendSelectedSkuIdsToBackend(selectedRowKeys);
       message.success(t('syncToWMSSuccess'));
+      // Generate txt content
+      const { message: msg, content } = response;
+      let txtContent = `WMS Sync Result\n`;
+      txtContent += `Message: ${msg}\n`;
+      if (content) {
+        txtContent += `\n[Created SKUs]\n${JSON.stringify(content.created, null, 2)}\n`;
+        txtContent += `\n[Updated SKUs]\n${JSON.stringify(content.updated, null, 2)}\n`;
+        txtContent += `\n[Failed SKUs]\n${JSON.stringify(content.failures, null, 2)}\n`;
+      }
+      const now = new Date();
+      const timestamp = `${now.getFullYear().toString().slice(-2)}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}${now.getSeconds().toString().padStart(2, '0')}`;
+      const txtFileName = `WMS_Sync_Result_${timestamp}.txt`;
+      downloadTxtFile(txtContent, txtFileName);
+      
     } catch (error) {
       message.error(t('syncToWMSError'));
     }
