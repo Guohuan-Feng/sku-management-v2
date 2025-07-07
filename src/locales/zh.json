@@ -244,9 +244,9 @@
     "common": {
       "records": "条"
     },
-    "syncToWMS": "同步到WMS",
+    "syncToWMS": "上传SKU信息至WMS",
     "noSkuSelected": "请先选择要同步的SKU！",
     "syncToWMSSuccess": "已成功同步到WMS！",
-    "syncToWMSError": "同步到WMS失败，请重试。"
+    "syncToWMSError": "上传SKU信息至WMS到WMS失败，请重试。"
   }
 }
