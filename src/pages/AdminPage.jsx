@@ -8,7 +8,8 @@ import {
   changeUserPassword,
   changeUserRole,
   getCurrentUserInfo,
-  registerUser
+  registerUser,
+  sendUserWMSToken
 } from '../services/skuApiService'; // 确保这些函数已在 skuApiService.js 中导出
 
 const { Option } = Select;
@@ -24,6 +25,10 @@ const AdminPage = () => {
   const [registerModalVisible, setRegisterModalVisible] = useState(false);
   const [registerLoading, setRegisterLoading] = useState(false);
   const [registerForm] = Form.useForm();
+  const [wmsTokenModalVisible, setWmsTokenModalVisible] = useState(false);
+  const [wmsTokenUser, setWmsTokenUser] = useState(null);
+  const [wmsTokenLoading, setWmsTokenLoading] = useState(false);
+  const [wmsTokenForm] = Form.useForm();
 
   // 获取用户列表
   const fetchUsers = async () => {
@@ -116,6 +121,29 @@ const AdminPage = () => {
     }
   };
 
+  const handleShowWmsTokenModal = (user) => {
+    setWmsTokenUser(user);
+    setWmsTokenModalVisible(true);
+    wmsTokenForm.resetFields();
+  };
+
+  const handleWmsTokenSubmit = async (values) => {
+    setWmsTokenLoading(true);
+    try {
+      await sendUserWMSToken({
+        id: wmsTokenUser.id,
+        api_key: values.api_key,
+        api_token: values.api_token,
+      });
+      message.success(t('wmsTokenSaved'));
+      setWmsTokenModalVisible(false);
+    } catch (error) {
+      message.error(error.message || t('wmsTokenSaveFailed'));
+    } finally {
+      setWmsTokenLoading(false);
+    }
+  };
+
   const columns = [
     {
       title: t('Email'), // 您需要在 i18n/zh.json 和 i18n/en.json 中添加 'email' 翻译
@@ -142,6 +170,7 @@ const AdminPage = () => {
           </Popconfirm>
           <Button onClick={() => showModal('password', record)}>{t('Change Password')}</Button> {/* 您需要在 i18n/zh.json 和 i18n/en.json 中添加 'changePassword' 翻译 */}
           <Button onClick={() => showModal('role', record)}>{t('Change Role')}</Button> {/* 您需要在 i18n/zh.json 和 i18n/en.json 中添加 'changeRole' 翻译 */}
+          <Button onClick={() => handleShowWmsTokenModal(record)}>{t('manageWMSToken')}</Button>
         </Space>
       ),
     },
@@ -290,6 +319,39 @@ const AdminPage = () => {
           <Form.Item>
             <Button type="primary" htmlType="submit" loading={registerLoading} block>
               {t('register') || '注册'}
+            </Button>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title={t('manageWMSToken')}
+        visible={wmsTokenModalVisible}
+        onCancel={() => setWmsTokenModalVisible(false)}
+        footer={null}
+      >
+        <Form
+          form={wmsTokenForm}
+          layout="vertical"
+          onFinish={handleWmsTokenSubmit}
+        >
+          <Form.Item
+            name="api_key"
+            label={t('apiKey')}
+            rules={[{ required: true, message: t('pleaseInputApiKey') }]}
+          >
+            <Input.Password autoComplete="off" />
+          </Form.Item>
+          <Form.Item
+            name="api_token"
+            label={t('apiToken')}
+            rules={[{ required: true, message: t('pleaseInputApiToken') }]}
+          >
+            <Input.Password autoComplete="off" />
+          </Form.Item>
+          <Form.Item>
+            <Button type="primary" htmlType="submit" loading={wmsTokenLoading} block>
+              {t('save')}
             </Button>
           </Form.Item>
         </Form>

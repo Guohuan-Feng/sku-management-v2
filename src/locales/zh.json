@@ -247,6 +247,13 @@
     "syncToWMS": "上传SKU信息至WMS",
     "noSkuSelected": "请先选择要同步的SKU！",
     "syncToWMSSuccess": "已成功同步到WMS！",
-    "syncToWMSError": "上传SKU信息至WMS到WMS失败，请重试。"
+    "syncToWMSError": "上传SKU信息至WMS到WMS失败，请重试。",
+    "manageWMSToken": "管理WMS Token",
+    "apiKey": "API Key",
+    "apiToken": "API Token",
+    "pleaseInputApiKey": "请输入API Key",
+    "pleaseInputApiToken": "请输入API Token",
+    "wmsTokenSaved": "WMS Token已保存！",
+    "wmsTokenSaveFailed": "WMS Token保存失败，请重试。"
   }
 }

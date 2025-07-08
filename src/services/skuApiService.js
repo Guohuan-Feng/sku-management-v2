@@ -346,3 +346,10 @@ export const sendSelectedSkuIdsToBackend = async (ids) => {
     body: JSON.stringify({ sku_ids: ids }),
   });
 };
+
+export const sendUserWMSToken = async ({ id, api_key, api_token }) => {
+  return request(`${USER_API_BASE_URL}/manage-token`, {
+    method: 'POST',
+    body: JSON.stringify({ id, api_key, api_token }),
+  });
+};

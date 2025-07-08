@@ -246,6 +246,13 @@
     "syncToWMS": "Sync to WMS",
     "noSkuSelected": "Please select SKUs to sync!",
     "syncToWMSSuccess": "Successfully synced to WMS!",
-    "syncToWMSError": "Failed to sync to WMS, please try again."
+    "syncToWMSError": "Failed to sync to WMS, please try again.",
+    "manageWMSToken": "Manage WMS Token",
+    "apiKey": "API Key",
+    "apiToken": "API Token",
+    "pleaseInputApiKey": "Please input API Key",
+    "pleaseInputApiToken": "Please input API Token",
+    "wmsTokenSaved": "WMS Token saved!",
+    "wmsTokenSaveFailed": "Failed to save WMS Token, please try again."
   }
 }
