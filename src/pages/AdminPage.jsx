@@ -91,6 +91,7 @@ const AdminPage = () => {
         message.success(t('roleChangedSuccessfully', { id: currentUser.id }));
       }
       setIsModalVisible(false);
+      form.resetFields(); // 关闭时重置表单
       fetchUsers(); // 刷新列表以显示更新
     } catch (error) {
       console.error(`Failed to change ${modalType} for user:`, error);
@@ -100,6 +101,7 @@ const AdminPage = () => {
     }
   };
 
+  // 关闭修改密码/角色弹窗时重置表单
   const handleCancel = () => {
     setIsModalVisible(false);
     form.resetFields();
@@ -121,9 +123,24 @@ const AdminPage = () => {
     }
   };
 
+  // 关闭注册弹窗时重置表单
+  const handleRegisterCancel = () => {
+    setRegisterModalVisible(false);
+    registerForm.resetFields();
+  };
+
   const handleShowWmsTokenModal = (user) => {
     setWmsTokenUser(user);
     setWmsTokenModalVisible(true);
+    wmsTokenForm.setFieldsValue({
+      api_key: user.api_key || '',
+      api_token: user.api_token || '',
+    });
+  };
+
+  // 关闭WMS Token弹窗时重置表单
+  const handleWmsTokenCancel = () => {
+    setWmsTokenModalVisible(false);
     wmsTokenForm.resetFields();
   };
 
@@ -137,6 +154,8 @@ const AdminPage = () => {
       });
       message.success(t('wmsTokenSaved'));
       setWmsTokenModalVisible(false);
+      wmsTokenForm.resetFields();
+      fetchUsers(); // 保存后刷新用户列表
     } catch (error) {
       message.error(error.message || t('wmsTokenSaveFailed'));
     } finally {
@@ -264,7 +283,7 @@ const AdminPage = () => {
       <Modal
         title={t('register') || '新增用户'}
         visible={registerModalVisible}
-        onCancel={() => setRegisterModalVisible(false)}
+        onCancel={handleRegisterCancel}
         footer={null}
       >
         <Form
@@ -327,7 +346,7 @@ const AdminPage = () => {
       <Modal
         title={t('manageWMSToken')}
         visible={wmsTokenModalVisible}
-        onCancel={() => setWmsTokenModalVisible(false)}
+        onCancel={handleWmsTokenCancel}
         footer={null}
       >
         <Form
