@@ -248,6 +248,21 @@ export const uploadSkuCsv = async (formData) => {
   });
 };
 
+// 新机制：上传任务接口
+export const uploadSkuTask = async (formData) => {
+  return request('https://vp.jfj.ai/JFJP/tasks/upload-task', {
+    method: 'POST',
+    body: formData,
+  });
+};
+
+// 新机制：查询任务状态
+export const getUploadTaskStatus = async (taskId) => {
+  return request(`https://vp.jfj.ai/JFJP/tasks/task-status/${taskId}`, {
+    method: 'GET',
+  });
+};
+
 export const loginUser = async (email, password) => {
   const response = await request(`${AUTH_API_BASE_URL}/login`, {
     method: 'POST',

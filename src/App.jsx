@@ -8,7 +8,7 @@ import { UploadOutlined, EditOutlined, DeleteOutlined, PlusOutlined, ExportOutli
 import SkuFormModal from './components/SkuFormModal';
 import EditableCell from './components/EditableCell';
 import AuthForm from './components/AuthForm'; // 添加这一行
-import { getAllSkus, createSku, updateSku, deleteSku, uploadSkuCsv, getCurrentUserInfo, sendSelectedSkuIdsToBackend } from './services/skuApiService';
+import { getAllSkus, createSku, updateSku, deleteSku, uploadSkuCsv, getCurrentUserInfo, sendSelectedSkuIdsToBackend, uploadSkuTask, getUploadTaskStatus } from './services/skuApiService';
 import { Routes, Route, Navigate, useLocation, Link, useNavigate } from 'react-router-dom';
 import AdminPage from './pages/AdminPage';
 import AccountPage from './pages/AccountPage';
@@ -800,6 +800,56 @@ const App = () => {
     }
   };
 
+  // 新机制上传任务
+  const handleExcelUploadTask = async (options) => {
+    const { file, onSuccess, onError } = options;
+    setLoading(true);
+    setErrorMessages([]);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const response = await uploadSkuTask(formData);
+      if (response && response.task_id) {
+        message.info(t('messages.uploadTaskSubmitted'));
+        // 轮询任务状态
+        let pollingCount = 0;
+        const maxPolling = 30; // 最多轮询30次
+        const pollInterval = 2000; // 2秒
+        const pollTaskStatus = async () => {
+          try {
+            const statusResp = await getUploadTaskStatus(response.task_id);
+            if (statusResp.status === 'completed' || statusResp.status === 'failed') {
+              onSuccess(statusResp, file);
+              message.success(t('messages.uploadTaskFinished', { status: statusResp.status }));
+              // 可根据statusResp内容处理结果展示
+              fetchSkusWithHandling();
+              setLoading(false);
+              return;
+            } else {
+              pollingCount++;
+              if (pollingCount < maxPolling) {
+                setTimeout(pollTaskStatus, pollInterval);
+              } else {
+                message.warning(t('messages.uploadTaskTimeout'));
+                setLoading(false);
+              }
+            }
+          } catch (err) {
+            message.error(t('messages.uploadTaskStatusError'));
+            setLoading(false);
+          }
+        };
+        pollTaskStatus();
+      } else {
+        throw new Error(t('messages.uploadTaskNoId'));
+      }
+    } catch (error) {
+      onError(error);
+      message.error(error.message || t('messages.uploadTaskFailed'));
+      setLoading(false);
+    }
+  };
+
   // New function for downloading Vendor Portal Template
   const handleDownloadTemplate = () => {
     // This is the file name you want the downloaded file to have.
@@ -952,11 +1002,18 @@ const App = () => {
                       </Button>
                       <Upload
                           ref={fileInputRef}
-                          customRequest={handleExcelUpload} // 从 handleCsvUpload 更改为 handleExcelUpload
+                          customRequest={handleExcelUpload} // 旧机制
                           showUploadList={false}
-                          accept=".csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" // 修改 accept 属性以包含 .xls 和 .xlsx
+                          accept=".csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                           name="file">
-                          <Button icon={<UploadOutlined />}>{t('uploadCsv')}</Button> {/* 这里的文本会在i18n中修改 */}
+                          <Button icon={<UploadOutlined />}>{t('uploadCsv')}</Button>
+                      </Upload>
+                      <Upload
+                          customRequest={handleExcelUploadTask} // 新机制
+                          showUploadList={false}
+                          accept=".csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                          name="file">
+                          <Button icon={<UploadOutlined />} type="dashed">{t('uploadCsvNewMechanism') || '新机制上传'}</Button>
                       </Upload>
                       {/* 新添加的"Vendor Portal Template"按钮 */}
                       <Button icon={<ExportOutlined />} onClick={handleDownloadTemplate}>
