@@ -852,18 +852,30 @@ const App = () => {
               setUploadProgress(100);
               setUploadStatusMessage(t('messages.uploadCompleted'));
 
+              // 自动下载txt反馈
+              let txtContent = '';
+              let txtFileName = `SKU_Upload_Result_${task_id || Date.now()}.txt`;
               if (file_data) {
-                // Assuming file_data is the content of the feedback TXT file
-                const feedbackBlob = new Blob([file_data], { type: 'text/plain;charset=utf-8' });
-                const feedbackUrl = window.URL.createObjectURL(feedbackBlob);
-                const a = document.createElement('a');
-                a.href = feedbackUrl;
-                a.download = `upload_feedback_${task_id}.txt`;
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-                window.URL.revokeObjectURL(feedbackUrl); // Clean up the URL object
+                // 如果后端直接返回txt内容
+                txtContent = file_data;
+              } else {
+                // 否则用结构化数据生成txt
+                txtContent = `SKU Upload Result:\n`;
+                if ('success_count' in statusResp) txtContent += `Success Count: ${statusResp.success_count}\n`;
+                if ('failure_count' in statusResp) txtContent += `Failure Count: ${statusResp.failure_count}\n`;
+                if ('failures' in statusResp) txtContent += `Failures:\n${JSON.stringify(statusResp.failures, null, 2)}\n`;
+                txtContent += `Raw Response:\n${JSON.stringify(statusResp, null, 2)}`;
               }
+              const feedbackBlob = new Blob([txtContent], { type: 'text/plain;charset=utf-8' });
+              const feedbackUrl = window.URL.createObjectURL(feedbackBlob);
+              const a = document.createElement('a');
+              a.href = feedbackUrl;
+              a.download = txtFileName;
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+              window.URL.revokeObjectURL(feedbackUrl);
+
               onSuccess(statusResp, file); // Notify Ant Design Upload component of success
               fetchSkusWithHandling(); // Refresh SKU list
             } else if (status === 'failed') {
