@@ -74,7 +74,7 @@ const refreshToken = async () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Custom-Secret': CUSTOM_SECRET_KEY,
+        'X-Custom-Secret': CUSTOM_SECRET_KEY, // Ensure secret key is sent
       },
       body: JSON.stringify({ refresh_token: currentRefreshToken }),
     });
@@ -103,7 +103,19 @@ const refreshToken = async () => {
 };
 
 const handleResponse = async (response) => {
-  if (response.headers.get('content-type')?.includes('application/json')) {
+  // Check if the response is a blob/file type (e.g., for CSV downloads)
+  const contentType = response.headers.get('content-type');
+  if (contentType && (contentType.includes('text/csv') || contentType.includes('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'))) {
+    if (!response.ok) {
+      // If it's a file and not OK, try to parse as text for error message
+      const errorText = await response.text();
+      throw new Error(`File download failed: ${response.status} - ${errorText}`);
+    }
+    return response.blob(); // Return blob for file downloads
+  }
+
+
+  if (contentType && contentType.includes('application/json')) {
     const data = await response.json();
 
     if (!response.ok) {
@@ -130,7 +142,7 @@ const handleResponse = async (response) => {
             errorMessage = data.detail;
           }
         } else if (data.errors && Array.isArray(data.errors)) {
-          errorMessage = data.errors.map(err => `${err.loc.join('.')} ${err.msg}`).join('; ');
+          errorMessage = data.errors.map(err => `${err.loc.join('.')}. ${err.msg}`).join('; '); // Corrected join for errors
         } else if (data.message && typeof data.message === 'string') {
           errorMessage = data.message;
         } else {
@@ -145,10 +157,11 @@ const handleResponse = async (response) => {
     }
     return data;
   } else {
+    // For non-JSON responses (e.g., plain text feedback from tasks)
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    return response.text();
+    return response.text(); // Return text for non-JSON responses
   }
 };
 
@@ -171,6 +184,7 @@ const request = async (url, options = {}) => {
     'X-Custom-Secret': CUSTOM_SECRET_KEY,
   };
 
+  // Only set Content-Type to application/json if body is not FormData
   if (!(options.body instanceof FormData)) {
     defaultHeaders['Content-Type'] = 'application/json';
   }
@@ -193,8 +207,28 @@ const request = async (url, options = {}) => {
     const response = await fetch(url, config);
 
     if (response.status === 401) {
-      clearAuthTokens();
-      throw new Error('Unauthorized: Please log in again.');
+      // If 401 occurs, try to refresh token once if it's not already refreshing
+      if (!isRefreshing) {
+        try {
+          const newAccessToken = await refreshToken();
+          // Retry the original request with the new token
+          config.headers['Authorization'] = `Bearer ${newAccessToken}`;
+          const retryResponse = await fetch(url, config);
+          return await handleResponse(retryResponse);
+        } catch (refreshError) {
+          console.error('Failed to refresh token on 401:', refreshError);
+          clearAuthTokens();
+          throw new Error('Authentication required: Please log in again.');
+        }
+      } else {
+        // If already refreshing, queue the request
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve: (token) => {
+            config.headers['Authorization'] = `Bearer ${token}`;
+            fetch(url, config).then(handleResponse).then(resolve).catch(reject);
+          }, reject });
+        });
+      }
     }
 
     return await handleResponse(response);
@@ -268,7 +302,7 @@ export const loginUser = async (email, password) => {
     method: 'POST',
     body: JSON.stringify({ email, password }),
     headers: {
-      'Authorization': undefined,
+      'Authorization': undefined, // Explicitly ensure no auth header for login
     },
   });
   return response;
@@ -280,7 +314,7 @@ export const registerUser = async (email, password, role) => {
     method: 'POST',
     body: JSON.stringify({ email, password, role }), // 添加 role 到请求体
     headers: {
-      'Authorization': undefined,
+      'Authorization': undefined, // Explicitly ensure no auth header for register
     },
   });
 };

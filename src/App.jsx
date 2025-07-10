@@ -1,7 +1,6 @@
-// src/App.jsx
 import { useState, useEffect, useRef } from 'react';
 import './App.css';
-import { Table, ConfigProvider, Button, message, Upload, Space, Popconfirm, Alert, Form, Input, Divider, Modal } from 'antd'; // 导入 Divider 和 Modal
+import { Table, ConfigProvider, Button, message, Upload, Space, Popconfirm, Alert, Form, Input, Divider, Modal, Progress, Spin } from 'antd'; // 导入 Progress 和 Spin
 import * as XLSX from 'xlsx';
 import { fieldsConfig, statusOptions, conditionOptions } from './components/fieldConfig';
 import { UploadOutlined, EditOutlined, DeleteOutlined, PlusOutlined, ExportOutlined, SaveOutlined, CloseOutlined, EyeOutlined, SearchOutlined } from '@ant-design/icons';
@@ -50,26 +49,32 @@ const App = () => {
   // New user info
   const [userInfo, setUserInfo] = useState(null);
 
+  // New state for upload progress and status message (for new mechanism)
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStatusMessage, setUploadStatusMessage] = useState('');
+  const [uploadingNewMechanism, setUploadingNewMechanism] = useState(false); // Track new mechanism upload state
+  const pollIntervalRef = useRef(null); // Ref to store the polling interval ID
+
   // Ant Design language pack mapping
   const antdLocales = {
     en: enUS,
     zh: zhCN,
   };
 
-    // 将获取用户信息和角色的逻辑封装成一个函数
-    const fetchUserInfoAndRole = async () => {
-      try {
-        const user = await getCurrentUserInfo(); //
-        setUserRole(user.role);
-        setUserInfo(user);
-        console.log("User info fetched:", user); // 添加日志，方便调试
-      } catch (error) {
-        console.error('Failed to fetch user info:', error);
-        setUserRole(null);
-        setUserInfo(null);
-        // 可以添加错误消息提示，例如：message.error(t('failedToLoadUserInfo'));
-      }
-    };
+  // 将获取用户信息和角色的逻辑封装成一个函数
+  const fetchUserInfoAndRole = async () => {
+    try {
+      const user = await getCurrentUserInfo();
+      setUserRole(user.role);
+      setUserInfo(user);
+      console.log("User info fetched:", user); // 添加日志，方便调试
+    } catch (error) {
+      console.error('Failed to fetch user info:', error);
+      setUserRole(null);
+      setUserInfo(null);
+      // 可以添加错误消息提示，例如：message.error(t('failedToLoadUserInfo'));
+    }
+  };
 
   // Check token in local storage to determine if the user is logged in
   useEffect(() => {
@@ -87,6 +92,16 @@ const App = () => {
       });
     }
   }, []);
+
+  // Cleanup effect for the polling interval
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+    };
+  }, []);
+
 
   const handleInlineFormValuesChange = (changedValues, allValues) => {
     setEditingRowData(prev => ({ ...prev, ...changedValues }));
@@ -138,9 +153,9 @@ const App = () => {
     const initialValues = { ...record };
     fieldsConfig.forEach(field => {
       if (field.type === 'select') {
-         if (initialValues[field.name] !== undefined && initialValues[field.name] !== null) {
-             initialValues[field.name] = String(initialValues[field.name]);
-         }
+          if (initialValues[field.name] !== undefined && initialValues[field.name] !== null) {
+            initialValues[field.name] = String(initialValues[field.name]);
+          }
       } else if (field.type === 'number' && initialValues[field.name] !== undefined && initialValues[field.name] !== null) {
         const numValue = parseFloat(initialValues[field.name]);
         initialValues[field.name] = isNaN(numValue) ? null : numValue;
@@ -187,9 +202,9 @@ const App = () => {
           if (field.type === 'number' && updatedItem[field.name] !== undefined && updatedItem[field.name] !== null) {
               const parsedValue = parseFloat(updatedItem[field.name]);
               if (!isNaN(parsedValue)) {
-                  updatedItem[field.name] = field.isFee ? parseFloat(parsedValue.toFixed(2)) : parsedValue;
+                updatedItem[field.name] = field.isFee ? parseFloat(parsedValue.toFixed(2)) : parsedValue;
               } else {
-                  updatedItem[field.name] = null;
+                updatedItem[field.name] = null;
               }
           }
           if (field.name === 'status' && updatedItem[field.name] !== undefined) {
@@ -456,7 +471,7 @@ const App = () => {
             successCount++;
             remainingSelectedKeys.splice(remainingSelectedKeys.indexOf(skuKey), 1);
           } else {
-             currentErrors.push(t('messages.skuIDNotFoundOrTemp', { key: skuKey }));
+              currentErrors.push(t('messages.skuIDNotFoundOrTemp', { key: skuKey }));
           }
         }
       } catch (error) {
@@ -474,7 +489,7 @@ const App = () => {
       message.error(t('tableOperations.deleteSelectedError', { count: currentErrors.length }));
     }
     if (successCount > 0 || selectedRowKeys.some(key => String(key).startsWith('new-temp-id'))) {
-         fetchSkusWithHandling();
+            fetchSkusWithHandling();
     }
     setSelectedRowKeys(remainingSelectedKeys);
   };
@@ -782,10 +797,10 @@ const App = () => {
           return `${fieldName}: ${fe.msg}`; //
         }).join('; '); //
         errorMessage += `${t('messages.validationErrors')}${detailedErrors}`; //
-         setErrorMessages(prev => [...prev, `${t('messages.validationErrorsInFile', { fileName: file.name })}: ${detailedErrors}`]); //
+          setErrorMessages(prev => [...prev, `${t('messages.validationErrorsInFile', { fileName: file.name })}: ${detailedErrors}`]); //
       } else if (error.message) { //
         errorMessage += error.message; //
-         setErrorMessages(prev => [...prev, `${t('messages.uploadError', { fileName: file.name })}: ${error.message}`]); //
+          setErrorMessages(prev => [...prev, `${t('messages.uploadError', { fileName: file.name })}: ${error.message}`]); //
       } else { //
         errorMessage += t('messages.unknownUploadError', { fileName: file.name }); //
         setErrorMessages(prev => [...prev, `${t('messages.unknownUploadError', { fileName: file.name })}`]); //
@@ -803,50 +818,88 @@ const App = () => {
   // 新机制上传任务
   const handleExcelUploadTask = async (options) => {
     const { file, onSuccess, onError } = options;
-    setLoading(true);
+    setUploadingNewMechanism(true); // Set new mechanism upload state
+    setUploadProgress(0); // Reset progress
+    setUploadStatusMessage(t('messages.uploadingFile')); // Initial message
     setErrorMessages([]);
     try {
       const formData = new FormData();
       formData.append('file', file);
-      const response = await uploadSkuTask(formData);
-      if (response && response.task_id) {
+      const response = await uploadSkuTask(formData); // This should return { task_id: "..." }
+      const { task_id } = response; // Assuming response directly contains task_id
+
+      if (task_id) {
         message.info(t('messages.uploadTaskSubmitted'));
-        // 轮询任务状态
-        let pollingCount = 0;
-        const maxPolling = 30; // 最多轮询30次
-        const pollInterval = 2000; // 2秒
-        const pollTaskStatus = async () => {
+
+        // Clear any existing interval to prevent multiple polling loops
+        if (pollIntervalRef.current) {
+          clearInterval(pollIntervalRef.current);
+        }
+
+        // Start polling for task status
+        pollIntervalRef.current = setInterval(async () => {
           try {
-            const statusResp = await getUploadTaskStatus(response.task_id);
-            if (statusResp.status === 'completed' || statusResp.status === 'failed') {
-              onSuccess(statusResp, file);
-              message.success(t('messages.uploadTaskFinished', { status: statusResp.status }));
-              // 可根据statusResp内容处理结果展示
-              fetchSkusWithHandling();
-              setLoading(false);
-              return;
-            } else {
-              pollingCount++;
-              if (pollingCount < maxPolling) {
-                setTimeout(pollTaskStatus, pollInterval);
-              } else {
-                message.warning(t('messages.uploadTaskTimeout'));
-                setLoading(false);
+            const statusResp = await getUploadTaskStatus(task_id);
+            const { status, percent, message: msg, file_data } = statusResp; // Assuming statusResp directly contains these fields
+
+            setUploadProgress(percent);
+            setUploadStatusMessage(msg || t('messages.processing'));
+
+            if (status === 'completed') {
+              clearInterval(pollIntervalRef.current); // Stop polling
+              message.success(t('messages.uploadCompletedSuccessfully'));
+              setUploadingNewMechanism(false);
+              setUploadProgress(100);
+              setUploadStatusMessage(t('messages.uploadCompleted'));
+
+              if (file_data) {
+                // Assuming file_data is the content of the feedback TXT file
+                const feedbackBlob = new Blob([file_data], { type: 'text/plain;charset=utf-8' });
+                const feedbackUrl = window.URL.createObjectURL(feedbackBlob);
+                const a = document.createElement('a');
+                a.href = feedbackUrl;
+                a.download = `upload_feedback_${task_id}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(feedbackUrl); // Clean up the URL object
               }
+              onSuccess(statusResp, file); // Notify Ant Design Upload component of success
+              fetchSkusWithHandling(); // Refresh SKU list
+            } else if (status === 'failed') {
+              clearInterval(pollIntervalRef.current); // Stop polling
+              message.error(`${t('messages.uploadFailed')}: ${msg}`);
+              setUploadingNewMechanism(false);
+              setUploadProgress(0); // Reset progress bar on failure
+              setUploadStatusMessage(`${t('messages.uploadFailed')}: ${msg}`);
+              onError(new Error(msg || t('messages.unknownUploadError'))); // Notify Ant Design Upload component of failure
             }
           } catch (err) {
+            clearInterval(pollIntervalRef.current); // Stop polling on error
+            console.error('Failed to get upload task status:', err);
             message.error(t('messages.uploadTaskStatusError'));
-            setLoading(false);
+            setUploadingNewMechanism(false);
+            setUploadProgress(0);
+            setUploadStatusMessage(t('messages.uploadTaskStatusError'));
+            onError(err);
           }
-        };
-        pollTaskStatus();
+        }, 3000); // Poll every 3 seconds
       } else {
         throw new Error(t('messages.uploadTaskNoId'));
       }
     } catch (error) {
+      console.error('Upload failed:', error);
       onError(error);
       message.error(error.message || t('messages.uploadTaskFailed'));
-      setLoading(false);
+      setUploadingNewMechanism(false); // Reset upload state on initial failure
+      setUploadProgress(0);
+      setUploadStatusMessage(t('messages.uploadFailed'));
+    } finally {
+      // No setLoading(false) here, as polling continues.
+      // setLoading(false) will be called when polling finishes (completed/failed).
+      if (fileInputRef.current && fileInputRef.current.fileList) {
+        fileInputRef.current.fileList = [];
+      }
     }
   };
 
@@ -961,10 +1014,10 @@ const App = () => {
                       {/* Language toggle button */}
                       <Space className="language-selector">
                           <Button
-                              onClick={toggleLanguage}
-                              size="small"
+                            onClick={toggleLanguage}
+                            size="small"
                           >
-                              {i18n.language === 'en' ? '中文' : 'EN'}
+                            {i18n.language === 'en' ? '中文' : 'EN'}
                           </Button>
                       </Space>
                       {userRole === 'admin' && (
@@ -997,42 +1050,49 @@ const App = () => {
               )}
               <div className="table-actions-container">
                   <Space className="table-top-buttons">
-                      <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingSku(null); setIsModalOpen(true); }}>
-                          {t('createSkuModal')}
-                      </Button>
-                      <Upload
-                          ref={fileInputRef}
-                          customRequest={handleExcelUpload} // 旧机制
-                          showUploadList={false}
-                          accept=".csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                          name="file">
-                          <Button icon={<UploadOutlined />}>{t('uploadCsv')}</Button>
-                      </Upload>
-                      <Upload
-                          customRequest={handleExcelUploadTask} // 新机制
-                          showUploadList={false}
-                          accept=".csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                          name="file">
-                          <Button icon={<UploadOutlined />} type="dashed">{t('uploadCsvNewMechanism') || '新机制上传'}</Button>
-                      </Upload>
-                      {/* 新添加的"Vendor Portal Template"按钮 */}
-                      <Button icon={<ExportOutlined />} onClick={handleDownloadTemplate}>
-                          {t('vendorPortalTemplate')}
-                      </Button>
-                      <Button icon={<ExportOutlined />} onClick={handleExport}>
-                          {t('exportAll')}
-                      </Button>
-                      <Button onClick={handleSyncToWMS} icon={<ExportOutlined />}>{t('syncToWMS')}</Button>
-                      {/* Place search bar here */}
-                      <div className="search-bar-container">
-                          <Input
-                              prefix={<SearchOutlined />}
-                              placeholder={t('searchPlaceholder')}
-                              value={searchText}
-                              onChange={e => setSearchText(e.target.value)}
-                              style={{ width: 300 }}
-                          />
+                    <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingSku(null); setIsModalOpen(true); }}>
+                        {t('createSkuModal')}
+                    </Button>
+                    <Upload
+                        ref={fileInputRef}
+                        customRequest={handleExcelUpload} // 旧机制
+                        showUploadList={false}
+                        accept=".csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        name="file">
+                        <Button icon={<UploadOutlined />}>{t('uploadCsv')}</Button>
+                    </Upload>
+                    <Upload
+                        customRequest={handleExcelUploadTask} // 新机制
+                        showUploadList={false}
+                        accept=".csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        name="file">
+                        <Button icon={<UploadOutlined />} type="dashed" loading={uploadingNewMechanism}>{t('uploadCsvNewMechanism') || '新机制上传'}</Button>
+                    </Upload>
+                    {/* Progress bar and status message for new mechanism upload */}
+                    {uploadingNewMechanism && (
+                      <div style={{ width: 200, marginTop: 8 }}>
+                        <Progress percent={uploadProgress} status={uploadProgress === 100 ? 'success' : 'active'} />
+                        <p style={{ fontSize: '12px', color: '#888' }}>{uploadStatusMessage}</p>
                       </div>
+                    )}
+                    {/* 新添加的"Vendor Portal Template"按钮 */}
+                    <Button icon={<ExportOutlined />} onClick={handleDownloadTemplate}>
+                        {t('vendorPortalTemplate')}
+                    </Button>
+                    <Button icon={<ExportOutlined />} onClick={handleExport}>
+                        {t('exportAll')}
+                    </Button>
+                    <Button onClick={handleSyncToWMS} icon={<ExportOutlined />}>{t('syncToWMS')}</Button>
+                    {/* Place search bar here */}
+                    <div className="search-bar-container">
+                        <Input
+                            prefix={<SearchOutlined />}
+                            placeholder={t('searchPlaceholder')}
+                            value={searchText}
+                            onChange={e => setSearchText(e.target.value)}
+                            style={{ width: 300 }}
+                        />
+                    </div>
                   </Space>
               </div>
 
