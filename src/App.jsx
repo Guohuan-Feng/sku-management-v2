@@ -1176,16 +1176,16 @@ const App = () => {
                         ref={fileInputRef}
                         customRequest={handleExcelUpload} // 旧机制
                         showUploadList={false}
-                        accept=".csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        accept=".csv,.xlsx,.xls,.txt,.tsv,.ods,.xlsm,.xlsb,.zip"
                         name="file">
                         <Button icon={<UploadOutlined />}>{t('uploadCsv')}</Button>
                     </Upload>
                     <Upload
                         customRequest={handleExcelUploadTask} // 新机制
                         showUploadList={false}
-                        accept=".csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        accept=".csv,.xlsx,.xls,.txt,.tsv,.ods,.xlsm,.xlsb,.zip"
                         name="file">
-                        <Button icon={<UploadOutlined />} type="dashed" loading={uploadingNewMechanism}>{t('uploadCsvNewMechanism') || '新机制上传'}</Button>
+                        <Button icon={<UploadOutlined />} type="dashed" loading={uploadingNewMechanism}>{t('uploadCsvNewMechanism')}</Button>
                     </Upload>
                     {/* Progress bar and status message for new mechanism upload */}
                     {uploadingNewMechanism && (
