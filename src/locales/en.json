@@ -196,6 +196,16 @@
       "additional_color_1": "Additional Color 1",
       "additional_color_2": "Additional Color 2"
     },
+    "imageUpload": {
+      "upload": "Upload Image",
+      "uploading": "Uploading...",
+      "uploadSuccess": "Image uploaded successfully!",
+      "uploadFailed": "Image upload failed",
+      "onlyImageAllowed": "Only image files are allowed!",
+      "fileTooLarge": "Image file size cannot exceed 5MB!",
+      "preview": "Preview Image",
+      "noImage": "No Image"
+    },
     "validation": {
       "required": "{{label}} is required.",
       "invalidSKU": "Invalid SKU format (cannot start with 0, no special characters except hyphens). Max 100 characters.",

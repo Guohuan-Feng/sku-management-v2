@@ -197,6 +197,16 @@
       "additional_color_1": "附加颜色 1",
       "additional_color_2": "附加颜色 2"
     },
+    "imageUpload": {
+      "upload": "上传图片",
+      "uploading": "上传中...",
+      "uploadSuccess": "图片上传成功！",
+      "uploadFailed": "图片上传失败",
+      "onlyImageAllowed": "只能上传图片文件！",
+      "fileTooLarge": "图片文件大小不能超过5MB！",
+      "preview": "预览图片",
+      "noImage": "暂无图片"
+    },
     "validation": {
       "required": "{{label}} 是必填项。",
       "invalidSKU": "无效的 SKU 格式（不能以0开头，除连字符外不能包含特殊字符）。最多100个字符。",

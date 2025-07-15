@@ -7,7 +7,7 @@ import { UploadOutlined, EditOutlined, DeleteOutlined, PlusOutlined, ExportOutli
 import SkuFormModal from './components/SkuFormModal';
 import EditableCell from './components/EditableCell';
 import AuthForm from './components/AuthForm'; // 添加这一行
-import { getAllSkus, createSku, updateSku, deleteSku, uploadSkuCsv, getCurrentUserInfo, sendSelectedSkuIdsToBackend, uploadSkuTask, getUploadTaskStatus } from './services/skuApiService';
+import { getAllSkus, createSku, updateSku, deleteSku, uploadSkuCsv, getCurrentUserInfo, sendSelectedSkuIdsToBackend, uploadSkuTask, getUploadTaskStatus, setImageProductId } from './services/skuApiService';
 import { Routes, Route, Navigate, useLocation, Link, useNavigate } from 'react-router-dom';
 import AdminPage from './pages/AdminPage';
 import AccountPage from './pages/AccountPage';
@@ -180,6 +180,9 @@ const App = () => {
     form.setFieldsValue(initialValues);
     setEditingRowData(initialValues);
     setEditingKey(record.key);
+    
+    // 为record添加form引用，以便EditableCell能够更新表单值
+    record.form = form;
   };
 
   const cancel = () => {
@@ -238,8 +241,25 @@ const App = () => {
       const { key: _, ...apiPayload } = updatedItem;
 
       if (String(key).startsWith('new-temp-id')) {
-        await createSku(apiPayload);
+        const createdSku = await createSku(apiPayload);
         message.success(t('messages.skuCreated'));
+        
+        // 如果是创建新SKU，需要关联已上传的图片
+        if (createdSku && createdSku.id) {
+          const currentRecord = dataSource.find(item => item.key === key);
+          const uploadedImageIds = currentRecord?.uploadedImageIds || [];
+          
+          // 如果有图片需要关联，调用关联API
+          if (uploadedImageIds.length > 0) {
+            try {
+              await setImageProductId(uploadedImageIds, createdSku.id);
+              console.log('Images associated with SKU successfully');
+            } catch (error) {
+              console.error('Failed to associate images with SKU:', error);
+              // 不阻止SKU创建成功，只记录错误
+            }
+          }
+        }
       } else {
         await updateSku(apiPayload.id, apiPayload);
         message.success(t('messages.skuUpdated'));
@@ -279,6 +299,70 @@ const App = () => {
     const generatedColumns = columnsToDisplay
       .map((field) => {
         if (field.name === 'id') return null;
+
+        // 特殊处理main_image列
+        if (field.name === 'main_image') {
+          return {
+            title: <div style={{ textAlign: 'center' }}>{t(field.label)}</div>,
+            dataIndex: field.name,
+            key: field.name,
+            width: 200,
+            fixed: undefined,
+            ellipsis: true,
+            render: (text, record) => {
+              const editable = isEditing(record);
+              if (editable) {
+                return (
+                  <EditableCell
+                    editing={editable}
+                    dataIndex={field.name}
+                    inputType={field.type}
+                    record={record}
+                    title={t(field.label)}
+                  >
+                    {text}
+                  </EditableCell>
+                );
+              } else {
+                // 非编辑状态显示图片预览
+                return text ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Button
+                      icon={<EyeOutlined />}
+                      size="small"
+                      onClick={() => window.open(text, '_blank')}
+                      title={t('imageUpload.preview')}
+                    />
+                    <div style={{ 
+                      fontSize: '12px', 
+                      color: '#666', 
+                      overflow: 'hidden', 
+                      textOverflow: 'ellipsis', 
+                      whiteSpace: 'nowrap',
+                      flex: 1
+                    }}>
+                      {text}
+                    </div>
+                  </div>
+                ) : (
+                  <span style={{ color: '#999' }}>{t('imageUpload.noImage')}</span>
+                );
+              }
+            },
+            onCell: (record) => ({
+              record,
+              inputType: field.type,
+              dataIndex: field.name,
+              title: t(field.label),
+              editing: isEditing(record),
+              onClick: () => {
+                if (!isEditing(record)) {
+                  edit(record);
+                }
+              },
+            }),
+          };
+        }
 
         return {
           title: <div style={{ textAlign: 'center' }}>{t(field.label)}</div>,
@@ -548,8 +632,31 @@ const App = () => {
         success = true;
       } else {
         const { id: tempId, ...payload } = submissionValues;
-        await createSku(payload);
+        const createdSku = await createSku(payload);
         message.success(t('messages.skuCreated'));
+        
+        // 如果是创建新SKU，需要关联已上传的图片
+        if (createdSku && createdSku.id) {
+          // 从表单中获取已上传的图片ID
+          const uploadedImageIds = [];
+          
+          // 检查是否有main_image的图片ID需要关联
+          if (initialDataParam && initialDataParam.uploadedImageIds && initialDataParam.uploadedImageIds.length > 0) {
+            uploadedImageIds.push(...initialDataParam.uploadedImageIds);
+          }
+          
+          // 如果有图片需要关联，调用关联API
+          if (uploadedImageIds.length > 0) {
+            try {
+              await setImageProductId(uploadedImageIds, createdSku.id);
+              console.log('Images associated with SKU successfully');
+            } catch (error) {
+              console.error('Failed to associate images with SKU:', error);
+              // 不阻止SKU创建成功，只记录错误
+            }
+          }
+        }
+        
         success = true;
       }
 

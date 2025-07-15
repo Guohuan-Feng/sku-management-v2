@@ -3,6 +3,7 @@ import React from 'react';
 import { Form, Input, InputNumber, Select } from 'antd';
 import { fieldsConfig, statusOptions, conditionOptions } from './fieldConfig';
 import { useTranslation } from 'react-i18next'; // 引入 useTranslation
+import ImageUploadCell from './ImageUploadCell';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -54,6 +55,29 @@ const EditableCell = ({
   const inputNode = () => {
     // 提取 placeholder 文本
     const placeholderText = field?.example || field?.description || '';
+
+    // 特殊处理main_image字段
+    if (field?.name === 'main_image') {
+      return (
+        <ImageUploadCell
+          value={record[dataIndex]}
+          onChange={(url, imageId) => {
+            // 更新表单值
+            const form = record.form;
+            if (form) {
+              form.setFieldsValue({ [dataIndex]: url });
+            }
+            // 保存图片ID到record中，用于后续关联
+            if (imageId) {
+              record.uploadedImageIds = record.uploadedImageIds || [];
+              record.uploadedImageIds.push(imageId);
+            }
+          }}
+          record={record}
+          fieldName="main_image"
+        />
+      );
+    }
 
     switch (field?.type) {
       case 'text':

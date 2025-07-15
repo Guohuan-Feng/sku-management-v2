@@ -5,6 +5,7 @@ import { generateAIDescription, translateProductName } from '../services/skuApiS
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { fieldsConfig, statusOptions, conditionOptions } from './fieldConfig'; // 确保导入 fieldsConfig
+import ImageUploadCell from './ImageUploadCell';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -28,6 +29,7 @@ const SkuFormModal = ({
   apiFieldErrors,
   showAllMode = false,
 }) => {
+  const [uploadedImageIds, setUploadedImageIds] = useState([]);
   const { t } = useTranslation();
   const [form] = Form.useForm();
   const [aiLoading, setAiLoading] = useState(false);
@@ -180,10 +182,17 @@ const SkuFormModal = ({
         }
       });
 
-      const success = await onSubmit(submissionValues, initialData); // 传递 initialData 以便判断是创建还是更新
+      // 添加已上传的图片ID到提交数据中
+      const submissionData = {
+        ...submissionValues,
+        uploadedImageIds: uploadedImageIds
+      };
+
+      const success = await onSubmit(submissionData, initialData); // 传递 initialData 以便判断是创建还是更新
       if (success) {
         localStorage.removeItem(LOCAL_STORAGE_KEY); // 成功提交后清除临时数据
         form.resetFields();
+        setUploadedImageIds([]); // 清除已上传的图片ID
       }
     } catch (info) {
       console.log('Validate Failed (Frontend Validation Failed):', info);
@@ -313,6 +322,23 @@ const SkuFormModal = ({
 
   const renderField = (field) => {
     const placeholderText = field?.example || field?.description || '';
+
+    // 特殊处理main_image字段
+    if (field.name === 'main_image') {
+      return (
+        <ImageUploadCell
+          value={form.getFieldValue(field.name)}
+          onChange={(url, imageId) => {
+            form.setFieldsValue({ [field.name]: url });
+            if (imageId) {
+              setUploadedImageIds(prev => [...prev, imageId]);
+            }
+          }}
+          record={{ id: initialData?.id }}
+          fieldName="main_image"
+        />
+      );
+    }
 
     switch (field.type) {
       case 'text':

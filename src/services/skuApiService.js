@@ -397,8 +397,33 @@ export const sendSelectedSkuIdsToBackend = async (ids) => {
 };
 
 export const sendUserWMSToken = async ({ id, api_key, api_token }) => {
-  return request(`${USER_API_BASE_URL}/manage-token`, {
+  return request(`${USER_API_BASE_URL}/wms-token`, {
     method: 'POST',
     body: JSON.stringify({ id, api_key, api_token }),
+  });
+};
+
+// 图片上传相关API
+export const uploadImage = async (file, fieldName, skuId = null) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('field_name', fieldName);
+  if (skuId) {
+    formData.append('sku_id', skuId);
+  }
+
+  return request('https://vp.jfj.ai/JFJP/image/upload-image', {
+    method: 'POST',
+    body: formData,
+  });
+};
+
+export const setImageProductId = async (imageIds, productId) => {
+  return request('https://vp.jfj.ai/JFJP/image/upload-image/set-image-product-id', {
+    method: 'POST',
+    body: JSON.stringify({
+      image_ids: imageIds,
+      product_id: productId,
+    }),
   });
 };
