@@ -22,6 +22,9 @@ import { useTranslation } from 'react-i18next';
 // Assume the Logo in the image is a local image, or you can replace it with a CDN link
 import JFJPLogo from '/JFJP_logo.png';
 
+import JSZip from 'jszip';
+import imageCompression from 'browser-image-compression';
+
 const App = () => {
   const { t, i18n } = useTranslation();
   const [form] = Form.useForm();
@@ -925,97 +928,130 @@ const App = () => {
   // 新机制上传任务
   const handleExcelUploadTask = async (options) => {
     const { file, onSuccess, onError } = options;
-    setUploadingNewMechanism(true); // Set new mechanism upload state
-    setUploadProgress(0); // Reset progress
-    setUploadStatusMessage(t('messages.uploadingFile')); // Initial message
+    setUploadingNewMechanism(true);
+    setUploadProgress(0);
+    setUploadStatusMessage(t('messages.uploadingFile'));
     setErrorMessages([]);
+
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const response = await uploadSkuTask(formData); // This should return { task_id: "..." }
-      const { task_id } = response; // Assuming response directly contains task_id
+      // 1. 读取 zip 文件内容
+      const zip = await JSZip.loadAsync(file);
 
-      if (task_id) {
-        message.info(t('messages.uploadTaskSubmitted'));
+      // 2. 遍历 zip 内容，处理图片
+      const newZip = new JSZip();
+      let xlsxFile = null;
 
-        // Clear any existing interval to prevent multiple polling loops
-        if (pollIntervalRef.current) {
-          clearInterval(pollIntervalRef.current);
-        }
-
-        // Start polling for task status
-        pollIntervalRef.current = setInterval(async () => {
-          try {
-            const statusResp = await getUploadTaskStatus(task_id);
-            const { status, percent, message: msg, file_data } = statusResp; // Assuming statusResp directly contains these fields
-
-            setUploadProgress(percent);
-            setUploadStatusMessage(msg || t('messages.processing'));
-
-            if (status === 'completed') {
-              clearInterval(pollIntervalRef.current); // Stop polling
-              message.success(t('messages.uploadCompletedSuccessfully'));
-              setUploadingNewMechanism(false);
-              setUploadProgress(100);
-              setUploadStatusMessage(t('messages.uploadCompleted'));
-
-              // 自动下载txt反馈
-              let txtContent = '';
-              let txtFileName = `SKU_Upload_Result_${task_id || Date.now()}.txt`;
-              if (file_data) {
-                // 如果后端直接返回txt内容
-                txtContent = file_data;
-              } else {
-                // 否则用结构化数据生成txt
-                txtContent = `SKU Upload Result:\n`;
-                if ('success_count' in statusResp) txtContent += `Success Count: ${statusResp.success_count}\n`;
-                if ('failure_count' in statusResp) txtContent += `Failure Count: ${statusResp.failure_count}\n`;
-                if ('failures' in statusResp) txtContent += `Failures:\n${JSON.stringify(statusResp.failures, null, 2)}\n`;
-                txtContent += `Raw Response:\n${JSON.stringify(statusResp, null, 2)}`;
-              }
-              const feedbackBlob = new Blob([txtContent], { type: 'text/plain;charset=utf-8' });
-              const feedbackUrl = window.URL.createObjectURL(feedbackBlob);
-              const a = document.createElement('a');
-              a.href = feedbackUrl;
-              a.download = txtFileName;
-              document.body.appendChild(a);
-              a.click();
-              a.remove();
-              window.URL.revokeObjectURL(feedbackUrl);
-
-              onSuccess(statusResp, file); // Notify Ant Design Upload component of success
-              fetchSkusWithHandling(); // Refresh SKU list
-            } else if (status === 'failed') {
-              clearInterval(pollIntervalRef.current); // Stop polling
-              message.error(`${t('messages.uploadFailed')}: ${msg}`);
-              setUploadingNewMechanism(false);
-              setUploadProgress(0); // Reset progress bar on failure
-              setUploadStatusMessage(`${t('messages.uploadFailed')}: ${msg}`);
-              onError(new Error(msg || t('messages.unknownUploadError'))); // Notify Ant Design Upload component of failure
+      await Promise.all(
+        Object.keys(zip.files).map(async (filename) => {
+          const entry = zip.files[filename];
+          if (entry.dir) {
+            newZip.folder(filename); // 保持文件夹结构
+          } else if (/\.(jpe?g|png|gif|bmp|webp)$/i.test(filename)) {
+            // 是图片，处理压缩
+            const imgBlob = await entry.async('blob');
+            if (imgBlob.size === 0) return;
+            let isImage = true;
+            try {
+              await createImageBitmap(imgBlob);
+            } catch (e) {
+              isImage = false;
             }
-          } catch (err) {
-            clearInterval(pollIntervalRef.current); // Stop polling on error
-            console.error('Failed to get upload task status:', err);
-            message.error(t('messages.uploadTaskStatusError'));
-            setUploadingNewMechanism(false);
-            setUploadProgress(0);
-            setUploadStatusMessage(t('messages.uploadTaskStatusError'));
-            onError(err);
+            if (!isImage) return;
+            let compressedBlob = imgBlob;
+            try {
+              compressedBlob = await imageCompression(imgBlob, {
+                maxSizeMB: 0.2,
+                maxWidthOrHeight: 4096,
+                fileType: 'image/webp',
+                useWebWorker: true,
+              });
+            } catch (e) {
+              compressedBlob = imgBlob;
+            }
+            const newFilename = filename.replace(/\.[^/.]+$/, '.webp');
+            newZip.file(newFilename, compressedBlob);
+          } else if (/\.(xlsx|xls)$/i.test(filename)) {
+            const xlsxBlob = await entry.async('blob');
+            newZip.file(filename, xlsxBlob);
+            xlsxFile = filename;
+          } else {
+            const otherBlob = await entry.async('blob');
+            newZip.file(filename, otherBlob);
           }
-        }, 3000); // Poll every 3 seconds
-      } else {
-        throw new Error(t('messages.uploadTaskNoId'));
+        })
+      );
+
+      // 3. 生成新的 zip Blob
+      const newZipBlob = await newZip.generateAsync({ type: 'blob' });
+
+      // 4. 上传新 zip 到后端
+      const formData = new FormData();
+      const now = new Date();
+      const timestamp = `${now.getFullYear()}${(now.getMonth() + 1)
+        .toString()
+        .padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now
+        .getHours()
+        .toString()
+        .padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}${now
+        .getSeconds()
+        .toString()
+        .padStart(2, '0')}`;
+      const zipFileName = `upload_${timestamp}.zip`;
+      formData.append('file', new File([newZipBlob], zipFileName, { type: 'application/zip' }));
+
+      // 5. 上传
+      const response = await uploadSkuTask(formData);
+
+      // 6. 自动下载刚才上传的 zip
+      const downloadUrl = URL.createObjectURL(newZipBlob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = zipFileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(downloadUrl);
+
+      // 7. 自动下载后端返回的txt反馈（保留你原有的txt下载逻辑）
+      if (response) {
+        // 兼容后端直接返回txt内容或结构化数据
+        let txtContent = '';
+        let txtFileName = `SKU_Upload_Result_${timestamp}.txt`;
+        if (response.file_data) {
+          txtContent = response.file_data;
+        } else {
+          txtContent = `SKU Upload Result:\n`;
+          if ('success_count' in response) txtContent += `Success Count: ${response.success_count}\n`;
+          if ('failure_count' in response) txtContent += `Failure Count: ${response.failure_count}\n`;
+          if ('failures' in response) txtContent += `Failures:\n${JSON.stringify(response.failures, null, 2)}\n`;
+          txtContent += `Raw Response:\n${JSON.stringify(response, null, 2)}`;
+        }
+        const feedbackBlob = new Blob([txtContent], { type: 'text/plain;charset=utf-8' });
+        const feedbackUrl = window.URL.createObjectURL(feedbackBlob);
+        const a2 = document.createElement('a');
+        a2.href = feedbackUrl;
+        a2.download = txtFileName;
+        document.body.appendChild(a2);
+        a2.click();
+        a2.remove();
+        window.URL.revokeObjectURL(feedbackUrl);
       }
+
+      // 8. 其它原有逻辑
+      onSuccess(response, file);
+      setUploadingNewMechanism(false);
+      setUploadProgress(100);
+      setUploadStatusMessage(t('messages.uploadCompleted'));
+      fetchSkusWithHandling();
+      message.success(t('messages.uploadCompletedSuccessfully'));
     } catch (error) {
       console.error('Upload failed:', error);
       onError(error);
       message.error(error.message || t('messages.uploadTaskFailed'));
-      setUploadingNewMechanism(false); // Reset upload state on initial failure
+      setUploadingNewMechanism(false);
       setUploadProgress(0);
       setUploadStatusMessage(t('messages.uploadFailed'));
     } finally {
-      // No setLoading(false) here, as polling continues.
-      // setLoading(false) will be called when polling finishes (completed/failed).
       if (fileInputRef.current && fileInputRef.current.fileList) {
         fileInputRef.current.fileList = [];
       }
