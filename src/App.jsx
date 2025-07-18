@@ -1012,38 +1012,66 @@ const App = () => {
       a.remove();
       URL.revokeObjectURL(downloadUrl);
 
-      // 7. 自动下载后端返回的txt反馈（保留你原有的txt下载逻辑）
-      if (response) {
-        // 兼容后端直接返回txt内容或结构化数据
-        let txtContent = '';
-        let txtFileName = `SKU_Upload_Result_${timestamp}.txt`;
-        if (response.file_data) {
-          txtContent = response.file_data;
-        } else {
-          txtContent = `SKU Upload Result:\n`;
-          if ('success_count' in response) txtContent += `Success Count: ${response.success_count}\n`;
-          if ('failure_count' in response) txtContent += `Failure Count: ${response.failure_count}\n`;
-          if ('failures' in response) txtContent += `Failures:\n${JSON.stringify(response.failures, null, 2)}\n`;
-          txtContent += `Raw Response:\n${JSON.stringify(response, null, 2)}`;
-        }
-        const feedbackBlob = new Blob([txtContent], { type: 'text/plain;charset=utf-8' });
-        const feedbackUrl = window.URL.createObjectURL(feedbackBlob);
-        const a2 = document.createElement('a');
-        a2.href = feedbackUrl;
-        a2.download = txtFileName;
-        document.body.appendChild(a2);
-        a2.click();
-        a2.remove();
-        window.URL.revokeObjectURL(feedbackUrl);
+      // 7. 轮询任务状态，只有 completed 时才生成 txt
+      if (response && response.task_id) {
+        const task_id = response.task_id;
+        let pollCount = 0;
+        const maxPoll = 60; // 最多轮询60次（3分钟）
+        const poll = setInterval(async () => {
+          pollCount++;
+          try {
+            const statusResp = await getUploadTaskStatus(task_id);
+            if (statusResp.status === 'completed' || statusResp.status_code === 200) {
+              clearInterval(poll);
+
+              // 生成txt内容
+              let txtContent = `SKU Upload Result:\n`;
+              if ('success_count' in statusResp) txtContent += `Success Count: ${statusResp.success_count}\n`;
+              if ('failure_count' in statusResp) txtContent += `Failure Count: ${statusResp.failure_count}\n`;
+              if ('failures' in statusResp) txtContent += `Failures:\n${JSON.stringify(statusResp.failures, null, 2)}\n`;
+              txtContent += `Raw Response:\n${JSON.stringify(statusResp, null, 2)}`;
+
+              let txtFileName = `SKU_Upload_Result_${task_id || Date.now()}.txt`;
+              const feedbackBlob = new Blob([txtContent], { type: 'text/plain;charset=utf-8' });
+              const feedbackUrl = window.URL.createObjectURL(feedbackBlob);
+              const a2 = document.createElement('a');
+              a2.href = feedbackUrl;
+              a2.download = txtFileName;
+              document.body.appendChild(a2);
+              a2.click();
+              a2.remove();
+              window.URL.revokeObjectURL(feedbackUrl);
+
+              // 其它后续逻辑
+              onSuccess(statusResp, file);
+              setUploadingNewMechanism(false);
+              setUploadProgress(100);
+              setUploadStatusMessage(t('messages.uploadCompleted'));
+              fetchSkusWithHandling();
+              message.success(t('messages.uploadCompletedSuccessfully'));
+            } else if (pollCount >= maxPoll) {
+              clearInterval(poll);
+              message.error('任务超时，请稍后在后台查看结果');
+              setUploadingNewMechanism(false);
+              setUploadProgress(0);
+              setUploadStatusMessage('任务超时');
+            }
+          } catch (err) {
+            clearInterval(poll);
+            message.error('查询任务状态失败');
+            setUploadingNewMechanism(false);
+            setUploadProgress(0);
+            setUploadStatusMessage('查询任务状态失败');
+          }
+        }, 3000);
+      } else {
+        // 没有task_id，直接失败
+        setUploadingNewMechanism(false);
+        setUploadProgress(0);
+        setUploadStatusMessage('未获取到任务ID');
+        message.error('未获取到任务ID');
       }
 
-      // 8. 其它原有逻辑
-      onSuccess(response, file);
-      setUploadingNewMechanism(false);
-      setUploadProgress(100);
-      setUploadStatusMessage(t('messages.uploadCompleted'));
-      fetchSkusWithHandling();
-      message.success(t('messages.uploadCompletedSuccessfully'));
     } catch (error) {
       console.error('Upload failed:', error);
       onError(error);
