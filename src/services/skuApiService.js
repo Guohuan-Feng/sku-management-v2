@@ -283,7 +283,8 @@ export const uploadSkuCsv = async (formData) => {
 };
 
 // 新机制：上传任务接口
-export const uploadSkuTask = async (formData) => {
+export const uploadSkuTask = async (formData, onUploadProgress) => {
+  // fetch/request 不支持 onUploadProgress，这里只是参数兼容
   return request('https://vp.jfj.ai/JFJP/tasks/upload-task', {
     method: 'POST',
     body: formData,

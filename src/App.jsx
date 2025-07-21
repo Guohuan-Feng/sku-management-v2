@@ -984,7 +984,7 @@ const App = () => {
       // 3. 生成新的 zip Blob
       const newZipBlob = await newZip.generateAsync({ type: 'blob' });
 
-      // 4. 上传新 zip 到后端
+      // 4. 上传新 zip 到后端（使用 XMLHttpRequest 以便监听进度）
       const formData = new FormData();
       const now = new Date();
       const timestamp = `${now.getFullYear()}${(now.getMonth() + 1)
@@ -999,78 +999,107 @@ const App = () => {
       const zipFileName = `upload_${timestamp}.zip`;
       formData.append('file', new File([newZipBlob], zipFileName, { type: 'application/zip' }));
 
-      // 5. 上传
-      const response = await uploadSkuTask(formData);
-
-      // 6. 自动下载刚才上传的 zip
-      const downloadUrl = URL.createObjectURL(newZipBlob);
-      const a = document.createElement('a');
-      a.href = downloadUrl;
-      a.download = zipFileName;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(downloadUrl);
-
-      // 7. 轮询任务状态，只有 completed 时才生成 txt
-      if (response && response.task_id) {
-        const task_id = response.task_id;
-        let pollCount = 0;
-        const maxPoll = 60; // 最多轮询60次（3分钟）
-        const poll = setInterval(async () => {
-          pollCount++;
+      // 用 XMLHttpRequest 实现进度条
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', 'https://vp.jfj.ai/JFJP/tasks/upload-task', true); // 不加 Authorization
+      xhr.setRequestHeader('X-Custom-Secret', import.meta.env.VITE_CUSTOM_SECRET_KEY); // 关键
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      }
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percent = Math.round((event.loaded / event.total) * 100);
+          setUploadProgress(percent);
+          setUploadStatusMessage(`${t('messages.uploadingFile')} (${percent}%)`);
+        }
+      };
+      xhr.onload = async function () {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          let response;
           try {
-            const statusResp = await getUploadTaskStatus(task_id);
-            if (statusResp.status === 'completed' || statusResp.status_code === 200) {
-              clearInterval(poll);
+            response = JSON.parse(xhr.responseText);
+          } catch (e) {
+            response = {};
+          }
+          // 轮询任务状态，只有 completed 时才生成 txt
+          if (response && response.task_id) {
+            const task_id = response.task_id;
+            let pollCount = 0;
+            const maxPoll = 60; // 最多轮询60次（3分钟）
+            const poll = setInterval(async () => {
+              pollCount++;
+              try {
+                const statusResp = await getUploadTaskStatus(task_id);
+                // 读取后端返回的 percent 字段，实时更新进度条
+                if (typeof statusResp.percent === 'number') {
+                  setUploadProgress(statusResp.percent);
+                  setUploadStatusMessage(`${t('messages.processingFile')} (${statusResp.percent}%)`);
+                }
+                if (statusResp.status === 'completed' || statusResp.status_code === 200) {
+                  clearInterval(poll);
 
-              // 生成txt内容
-              let txtContent = `SKU Upload Result:\n`;
-              if ('success_count' in statusResp) txtContent += `Success Count: ${statusResp.success_count}\n`;
-              if ('failure_count' in statusResp) txtContent += `Failure Count: ${statusResp.failure_count}\n`;
-              if ('failures' in statusResp) txtContent += `Failures:\n${JSON.stringify(statusResp.failures, null, 2)}\n`;
-              txtContent += `Raw Response:\n${JSON.stringify(statusResp, null, 2)}`;
+                  // 生成txt内容
+                  let txtContent = `SKU Upload Result:\n`;
+                  if ('success_count' in statusResp) txtContent += `Success Count: ${statusResp.success_count}\n`;
+                  if ('failure_count' in statusResp) txtContent += `Failure Count: ${statusResp.failure_count}\n`;
+                  if ('failures' in statusResp) txtContent += `Failures:\n${JSON.stringify(statusResp.failures, null, 2)}\n`;
+                  txtContent += `Raw Response:\n${JSON.stringify(statusResp, null, 2)}`;
 
-              let txtFileName = `SKU_Upload_Result_${task_id || Date.now()}.txt`;
-              const feedbackBlob = new Blob([txtContent], { type: 'text/plain;charset=utf-8' });
-              const feedbackUrl = window.URL.createObjectURL(feedbackBlob);
-              const a2 = document.createElement('a');
-              a2.href = feedbackUrl;
-              a2.download = txtFileName;
-              document.body.appendChild(a2);
-              a2.click();
-              a2.remove();
-              window.URL.revokeObjectURL(feedbackUrl);
+                  let txtFileName = `SKU_Upload_Result_${task_id || Date.now()}.txt`;
+                  const feedbackBlob = new Blob([txtContent], { type: 'text/plain;charset=utf-8' });
+                  const feedbackUrl = window.URL.createObjectURL(feedbackBlob);
+                  const a2 = document.createElement('a');
+                  a2.href = feedbackUrl;
+                  a2.download = txtFileName;
+                  document.body.appendChild(a2);
+                  a2.click();
+                  a2.remove();
+                  window.URL.revokeObjectURL(feedbackUrl);
 
-              // 其它后续逻辑
-              onSuccess(statusResp, file);
-              setUploadingNewMechanism(false);
-              setUploadProgress(100);
-              setUploadStatusMessage(t('messages.uploadCompleted'));
-              fetchSkusWithHandling();
-              message.success(t('messages.uploadCompletedSuccessfully'));
-            } else if (pollCount >= maxPoll) {
-              clearInterval(poll);
-              message.error('任务超时，请稍后在后台查看结果');
-              setUploadingNewMechanism(false);
-              setUploadProgress(0);
-              setUploadStatusMessage('任务超时');
-            }
-          } catch (err) {
-            clearInterval(poll);
-            message.error('查询任务状态失败');
+                  // 其它后续逻辑
+                  onSuccess(statusResp, file);
+                  setUploadingNewMechanism(false);
+                  fetchSkusWithHandling();
+                  message.success(t('messages.uploadCompletedSuccessfully'));
+                } else if (pollCount >= maxPoll) {
+                  clearInterval(poll);
+                  message.error('任务超时，请稍后在后台查看结果');
+                  setUploadingNewMechanism(false);
+                  setUploadProgress(0);
+                  setUploadStatusMessage('任务超时');
+                }
+              } catch (err) {
+                clearInterval(poll);
+                message.error('查询任务状态失败');
+                setUploadingNewMechanism(false);
+                setUploadProgress(0);
+                setUploadStatusMessage('查询任务状态失败');
+              }
+            }, 3000);
+          } else {
+            // 没有task_id，直接失败
             setUploadingNewMechanism(false);
             setUploadProgress(0);
-            setUploadStatusMessage('查询任务状态失败');
+            setUploadStatusMessage('未获取到任务ID');
+            message.error('未获取到任务ID');
           }
-        }, 3000);
-      } else {
-        // 没有task_id，直接失败
+        } else {
+          setUploadingNewMechanism(false);
+          setUploadProgress(0);
+          setUploadStatusMessage(t('messages.uploadFailed'));
+          onError(xhr.responseText);
+          message.error(xhr.responseText || t('messages.uploadTaskFailed'));
+        }
+      };
+      xhr.onerror = function () {
         setUploadingNewMechanism(false);
         setUploadProgress(0);
-        setUploadStatusMessage('未获取到任务ID');
-        message.error('未获取到任务ID');
-      }
+        setUploadStatusMessage(t('messages.uploadFailed'));
+        onError(xhr.responseText);
+        message.error(xhr.responseText || t('messages.uploadTaskFailed'));
+      };
+      xhr.send(formData);
 
     } catch (error) {
       console.error('Upload failed:', error);
