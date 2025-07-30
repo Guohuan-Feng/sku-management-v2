@@ -984,8 +984,7 @@ const App = () => {
       // 3. 生成新的 zip Blob
       const newZipBlob = await newZip.generateAsync({ type: 'blob' });
 
-      // 4. 上传新 zip 到后端（使用 XMLHttpRequest 以便监听进度）
-      const formData = new FormData();
+      // 4. 自动下载压缩后的zip文件
       const now = new Date();
       const timestamp = `${now.getFullYear()}${(now.getMonth() + 1)
         .toString()
@@ -996,6 +995,20 @@ const App = () => {
         .getSeconds()
         .toString()
         .padStart(2, '0')}`;
+      const compressedZipFileName = `compressed_upload_${timestamp}.zip`;
+      
+      // 创建下载链接并自动下载
+      const downloadUrl = window.URL.createObjectURL(newZipBlob);
+      const downloadLink = document.createElement('a');
+      downloadLink.href = downloadUrl;
+      downloadLink.download = compressedZipFileName;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      window.URL.revokeObjectURL(downloadUrl);
+
+      // 5. 上传新 zip 到后端（使用 XMLHttpRequest 以便监听进度）
+      const formData = new FormData();
       const zipFileName = `upload_${timestamp}.zip`;
       formData.append('file', new File([newZipBlob], zipFileName, { type: 'application/zip' }));
 
