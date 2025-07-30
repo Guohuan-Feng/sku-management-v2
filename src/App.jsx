@@ -947,29 +947,89 @@ const App = () => {
           if (entry.dir) {
             newZip.folder(filename); // 保持文件夹结构
           } else if (/\.(jpe?g|png|gif|bmp|webp)$/i.test(filename)) {
-            // 是图片，处理压缩
-            const imgBlob = await entry.async('blob');
-            if (imgBlob.size === 0) return;
+            // 读取图片并修正type
+            const imgBlobRaw = await entry.async('blob');
+            if (imgBlobRaw.size === 0) return;
+            let imgBlob = imgBlobRaw;
+            if (!imgBlobRaw.type || !imgBlobRaw.type.startsWith('image/')) {
+              let ext = filename.split('.').pop().toLowerCase();
+              let mime = 'image/jpeg';
+              if (ext === 'png') mime = 'image/png';
+              if (ext === 'webp') mime = 'image/webp';
+              imgBlob = new Blob([imgBlobRaw], { type: mime });
+            }
+
+            // 检查是否为有效图片
             let isImage = true;
             try {
               await createImageBitmap(imgBlob);
             } catch (e) {
               isImage = false;
             }
-            if (!isImage) return;
+            if (!isImage) {
+              console.warn(`File ${filename} 不是有效图片，已跳过`);
+              message.warning(`文件 ${filename} 不是有效图片，已跳过`);
+              return;
+            }
+
+            console.log(`Processing image: ${filename}, size: ${(imgBlob.size / 1024 / 1024).toFixed(2)}MB`);
+
             let compressedBlob = imgBlob;
+            let compressionSuccess = false;
+
             try {
+              // 尝试压缩图片到2MB以内
               compressedBlob = await imageCompression(imgBlob, {
-                maxSizeMB: 0.2,
+                maxSizeMB: 0.3, // 目标大小0.3MB
                 maxWidthOrHeight: 4096,
                 fileType: 'image/webp',
                 useWebWorker: true,
+                quality: 0.8, // 初始质量
               });
+
+              // 如果压缩后仍然超过0.3MB，进行更激进的压缩
+              if (compressedBlob.size > 0.3 * 1024 * 1024) {
+                console.log(`Image ${filename} still too large (${(compressedBlob.size / 1024 / 1024).toFixed(2)}MB), applying aggressive compression`);
+                
+                compressedBlob = await imageCompression(imgBlob, {
+                  maxSizeMB: 0.3, // 目标大小0.3MB
+                  maxWidthOrHeight: 2048, // 降低分辨率
+                  fileType: 'image/webp',
+                  useWebWorker: true,
+                  quality: 0.5, // 降低质量
+                });
+              }
+
+              compressionSuccess = true;
+              console.log(`Image ${filename} compressed from ${(imgBlob.size / 1024 / 1024).toFixed(2)}MB to ${(compressedBlob.size / 1024 / 1024).toFixed(2)}MB`);
+
             } catch (e) {
-              compressedBlob = imgBlob;
+              console.error(`Failed to compress image ${filename}:`, e);
+              // 压缩失败，但原图不超过2MB，使用原图
+              if (imgBlob.size <= 2 * 1024 * 1024) {
+                console.log(`Using original image ${filename} (compression failed but size is acceptable)`);
+                compressedBlob = imgBlob;
+                compressionSuccess = true;
+              } else {
+                console.warn(`Image ${filename} compression failed and original size exceeds 2MB, skipping...`);
+                message.warning(`图片 ${filename} 压缩失败且原图超过2MB，已跳过该图片`);
+                return;
+              }
             }
-            const newFilename = filename.replace(/\.[^/.]+$/, '.webp');
-            newZip.file(newFilename, compressedBlob);
+            
+            // 最终安全检查：确保添加到zip的图片不超过2MB
+            if (compressionSuccess && compressedBlob.size > 2 * 1024 * 1024) {
+              console.warn(`Image ${filename} final size exceeds 2MB limit (${(compressedBlob.size / 1024 / 1024).toFixed(2)}MB), skipping...`);
+              message.warning(`图片 ${filename} 最终大小超过2MB限制，已跳过该图片`);
+              return;
+            }
+            
+            // 只有成功处理的图片才添加到zip
+            if (compressionSuccess) {
+              const newFilename = filename.replace(/\.[^/.]+$/, '.webp');
+              newZip.file(newFilename, compressedBlob);
+              console.log(`Successfully added image to zip: ${newFilename}`);
+            }
           } else if (/\.(xlsx|xls)$/i.test(filename)) {
             const xlsxBlob = await entry.async('blob');
             newZip.file(filename, xlsxBlob);
